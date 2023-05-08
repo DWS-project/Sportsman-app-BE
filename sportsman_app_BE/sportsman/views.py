@@ -16,18 +16,16 @@ def registration(request):
     email = request.data.get('email')
     phone = request.data.get('phone')
     password = request.data.get('password')
-    repeatedPassword = request.data.get('repPassword')
+    repeatedPassword = request.data.get('repeatedPassword')
     typeOfUser = request.data.get('typeOfUser')
     city = request.data.get('city')
     age = request.data.get('age')
     sports = request.data.get('interests')
-    # interesovanja u json string
     if(sports == []):
         interests = ""
     else:
         interests = json.dumps({"interests": sports})
     user = User.objects.filter(email=email)
-    print(name,surname,username,email,phone,password,repeatedPassword,city,age,interests)
     if (password != repeatedPassword):
         return JsonResponse({'status': False, 'message': "Lozinke se ne podudaraju"}, status=400)
     elif len(user) > 0:
