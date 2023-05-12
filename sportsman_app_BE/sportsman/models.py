@@ -12,7 +12,6 @@ class User(models.Model):
     surname=models.CharField(max_length=50)
     email=models.EmailField(max_length=50)
     password=models.CharField(max_length=20)
-    typeOfUser=models.ForeignKey(UserType,null=True,on_delete=models.SET_NULL)
     city = models.CharField(max_length=50,null=True)
     tel_number = models.CharField(max_length=20,null=True)
     age = models.IntegerField(null=True)
@@ -58,11 +57,10 @@ class Owner(models.Model):
     surname = models.CharField(max_length=50)
     email = models.EmailField(max_length=50)
     password = models.CharField(max_length=20)
-    typeOfUser = models.ForeignKey(UserType, null=True, on_delete=models.SET_NULL)
     location = models.TextField(null=True)
     tel_number = models.CharField(max_length=20, null=True)
     capacity = models.IntegerField(null=True)
-    type = models.IntegerField(null=True)
+    type = models.CharField(max_length=10,null=True)
     picture = models.CharField(max_length=50, null=True)
     def __str__(self):
         return self.email
