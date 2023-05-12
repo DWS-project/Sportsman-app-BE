@@ -9,7 +9,7 @@ from .models import *
 # Create your views here.
 
 @api_view(['POST'])
-def registrationUser(request):
+def registrationPlayer(request):
     name = request.data.get('name')
     surname = request.data.get('surname')
     username = request.data.get('username')
