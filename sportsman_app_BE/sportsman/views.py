@@ -1,8 +1,12 @@
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import JsonResponse
 from rest_framework.decorators import api_view
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.hashers import check_password
 import json
+
+from rest_framework.response import Response
+
 from .models import *
 
 
@@ -75,3 +79,27 @@ def login(request):
         user = list(User.objects.filter(email=email).values(
             'name', 'surname', 'email', 'phone', 'username', 'typeOfUser'))
         return JsonResponse(user, safe=False)
+
+
+@api_view(['GET'])
+def get_user_data(request, id):
+    try:
+        user = list(User.objects.filter(id=id).values())
+        return JsonResponse(user, safe=False)
+    except User.DoesNotExist:
+        return JsonResponse({"error":"User not found"})
+
+@api_view(['POST'])
+def update_user(request, id):
+    try:
+        user = User.objects.get(id=id)
+        user.username = request.data.get('username')
+        user.name = request.data.get('name')
+        user.surname = request.data.get('surname')
+        user.tel_number = request.data.get('tel_number')
+        user.city = request.data.get('city')
+        user.age = request.data.get('age')
+        user.save()
+        return JsonResponse({'success': True})
+    except:
+        return JsonResponse({'success': False, 'message': 'User not found.'})
