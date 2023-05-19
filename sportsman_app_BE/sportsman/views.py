@@ -100,7 +100,8 @@ def registration_owner(request):
     street = request.data.get('street')
     street_number = request.data.get('streetNumber')
     type_of_user = request.data.get('type')
-    location = json.dumps({"city": city, "street": street, "streetNumber": street_number})
+    location = json.dumps(
+        {"city": city, "street": street, "streetNumber": street_number})
     owner = Owner.objects.filter(email=email)
 
     if password != repeated_password:
@@ -146,8 +147,10 @@ def login(request):
             access_token = str(refresh)
             user.access_token = access_token
 
-            response.set_cookie("Authentication", access_token, 86400, httponly=True)
-            response.data = {"user": {"id": user.id, "email": user.email, "role": user.role}}
+            response.set_cookie(
+                "Authentication", access_token, 86400, httponly=True)
+            response.data = {"user": {"id": user.id,
+                                      "email": user.email, "role": user.role}}
             response.message = "Login successfully"
 
             return response
