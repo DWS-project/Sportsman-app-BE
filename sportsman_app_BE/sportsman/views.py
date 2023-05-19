@@ -1,5 +1,7 @@
 import json
 from django.http import JsonResponse
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import api_view
 from django.contrib.auth.hashers import make_password, check_password
 from .models import *
@@ -10,6 +12,28 @@ from rest_framework.response import Response
 
 # Create your views here.
 
+@swagger_auto_schema(
+    tags=['Authentication'],
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'name': openapi.Schema(type=openapi.TYPE_STRING, description='The name field'),
+            'surname': openapi.Schema(type=openapi.TYPE_STRING, description='The surname field'),
+            'username': openapi.Schema(type=openapi.TYPE_STRING, description='The username field'),
+            'email': openapi.Schema(type=openapi.TYPE_STRING, description='The email field'),
+            'tel_number': openapi.Schema(type=openapi.TYPE_STRING, description='The telephone number field'),
+            'password': openapi.Schema(type=openapi.TYPE_STRING, description='The password field'),
+            'repeated_password': openapi.Schema(type=openapi.TYPE_STRING, description='The repeated password field'),
+            'city': openapi.Schema(type=openapi.TYPE_STRING, description='The city field'),
+            'age': openapi.Schema(type=openapi.TYPE_INTEGER, description='The age field'),
+            'sports': openapi.Schema(type=openapi.TYPE_STRING, description='The interests field'),
+        },
+        required=['name', 'surname', 'username', 'email', 'tel_number', 'password', 'repeated_password', 'city', 'age',
+                  'sports']
+
+    )
+)
 @api_view(['POST'])
 def registration_player(request):
     name = request.data.get('name')
@@ -39,6 +63,29 @@ def registration_player(request):
         return JsonResponse({'status': True, 'message': "Uspješno ste se registrovali."}, status=201)
 
 
+@swagger_auto_schema(
+    tags=['Authentication'],
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'name': openapi.Schema(type=openapi.TYPE_STRING, description='The name field'),
+            'surname': openapi.Schema(type=openapi.TYPE_STRING, description='The surname field'),
+            'username': openapi.Schema(type=openapi.TYPE_STRING, description='The username field'),
+            'email': openapi.Schema(type=openapi.TYPE_STRING, description='The email field'),
+            'tel_number': openapi.Schema(type=openapi.TYPE_STRING, description='The telephone number field'),
+            'password': openapi.Schema(type=openapi.TYPE_STRING, description='The password field'),
+            'repeated_password': openapi.Schema(type=openapi.TYPE_STRING, description='The repeated password field'),
+            'city': openapi.Schema(type=openapi.TYPE_STRING, description='The city field'),
+            'capacity': openapi.Schema(type=openapi.TYPE_INTEGER, description='The capacity field'),
+            'street': openapi.Schema(type=openapi.TYPE_STRING, description='The street field'),
+            'streetNumber': openapi.Schema(type=openapi.TYPE_STRING, description='The street number field'),
+            'type': openapi.Schema(type=openapi.TYPE_STRING, description='The type field'),
+        },
+        required=['name', 'surname', 'username', 'email', 'tel_number', 'password', 'repeated_password', 'city',
+                  'capacity', 'street', 'streetNumber', 'type']
+    )
+)
 @api_view(['POST'])
 def registration_owner(request):
     name = request.data.get('name')
@@ -67,6 +114,21 @@ def registration_owner(request):
         return JsonResponse({'status': True, 'message': "Uspješno ste se registrovali."}, status=201)
 
 
+@swagger_auto_schema(
+    tags=['Authentication'],
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'email': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_EMAIL),
+            'password': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_PASSWORD),
+        },
+        required=['email', 'password'],
+    ),
+    responses={
+        200: 'Successful login response',
+    },
+)
 @api_view(['POST'])
 def login(request):
     data = request.data
@@ -99,6 +161,14 @@ def login(request):
                          "data": {},
                          }, status=status.HTTP_404_NOT_FOUND)
 
+
+@swagger_auto_schema(
+    tags=['Authentication'],
+    method='post',
+    responses={
+        200: 'Successful logout response',
+    },
+)
 @api_view(['POST'])
 def logout(request):
     response = Response()
