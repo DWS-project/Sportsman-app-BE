@@ -157,12 +157,12 @@ def login(request):
         else:
             return Response({"message": "Invalid username or password!!",
                              "data": {},
-                             }, status=status.HTTP_404_NOT_FOUND)
+                             }, status=status.HTTP_400_BAD_REQUEST)
 
     else:
         return Response({"message": "Invalid username or password!!",
                          "data": {},
-                         }, status=status.HTTP_404_NOT_FOUND)
+                         }, status=status.HTTP_400_BAD_REQUEST)
 
 
 @swagger_auto_schema(
