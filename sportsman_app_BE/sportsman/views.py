@@ -182,5 +182,6 @@ def logout(request):
 
     response.delete_cookie("Authentication")
 
-    response.data = {"message": "Logged out successfully"}
-    return response
+    return Response({"message": "Logged out successfully.",
+                     "data": {},
+                     }, status=status.HTTP_200_OK)
