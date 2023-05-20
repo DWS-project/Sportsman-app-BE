@@ -150,7 +150,8 @@ def login(request):
             response.set_cookie(
                 "Authentication", access_token, 86400, httponly=True)
             response.data = {"user": {"id": user.id,
-                                      "email": user.email, "role": user.role}}
+                                      "email": user.email, "role": user.role, "username": user.username,
+                                      "tel_number": user.tel_number, "age": user.age, "city": user.city, "sports": user.sports}}
             response.message = "Login successfully"
 
             return response
