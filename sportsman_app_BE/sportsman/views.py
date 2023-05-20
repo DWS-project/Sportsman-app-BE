@@ -151,7 +151,8 @@ def login(request):
                 "Authentication", access_token, 86400, httponly=True)
             response.data = {"user": {"id": user.id,
                                       "email": user.email, "role": user.role, "username": user.username,
-                                      "tel_number": user.tel_number, "age": user.age, "city": user.city, "interests": user.interests}}
+                                      "tel_number": user.tel_number, "age": user.age, "city": user.city, "interests": user.interests,
+                                      "name": user.name, "surname": user.surname}}
             response.message = "Login successfully"
 
             return response
