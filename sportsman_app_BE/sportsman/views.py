@@ -210,6 +210,20 @@ def logout(request):
                      }, status=status.HTTP_200_OK)
 
 
+@swagger_auto_schema(
+    method='put',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'email': openapi.Schema(type=openapi.TYPE_STRING),
+        },
+        required=['email']
+    ),
+    responses={
+        200: openapi.Response('OK'),
+        404: openapi.Response('Not Found'),
+    }
+)
 @api_view(['PUT'])
 def forgot_password(request):
     email = request.data.get('email')
@@ -242,6 +256,12 @@ def forgot_password(request):
             return JsonResponse({'status': True, 'message': 'Nova lozinka Vam je poslana na '+email}, status=status.HTTP_200_OK)
 
 
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: "OK",
+    }
+)
 @api_view(['GET'])
 def get_all_players(request):
     users = list(User.objects.values(
@@ -249,6 +269,12 @@ def get_all_players(request):
     return JsonResponse(users, safe=False, status=status.HTTP_200_OK)
 
 
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: "OK",
+    }
+)
 @api_view(['GET'])
 def get_all_owners(request):
     owners = list(Owner.objects.values(
@@ -256,6 +282,12 @@ def get_all_owners(request):
     return JsonResponse(owners, safe=False, status=status.HTTP_200_OK)
 
 
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: "OK",
+    }
+)
 @api_view(['GET'])
 def get_all_sport_halls(request):
     sport_halls = list(SportHall.objects.values(
