@@ -12,4 +12,5 @@ urlpatterns = [
          views.forgotPassword, name='forgotPassword'),
     path('players', views.getAllPlayers, name='getAllUsers'),
     path('owners', views.getAllOwners, name='getAllOwners'),
+    path('sport-halls', views.getAllSportHalls, name='getAllOwners'),
 ]
