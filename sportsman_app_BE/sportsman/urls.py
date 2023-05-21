@@ -9,5 +9,7 @@ urlpatterns = [
     path('authentication/register-owner',
          views.registration_owner, name='registrationOwner'),
     path('authentication/forgot-password',
-         views.forgotPassword, name='forgotPassword')
+         views.forgotPassword, name='forgotPassword'),
+    path('players', views.getAllPlayers, name='getAllUsers'),
+    path('owners', views.getAllOwners, name='getAllOwners'),
 ]
