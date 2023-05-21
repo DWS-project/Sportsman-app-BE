@@ -8,4 +8,5 @@ urlpatterns = [
          views.registration_player, name='registrationPlayer'),
     path('authentication/register-owner/',
          views.registration_owner, name='registrationOwner'),
+    path('landing-page-cards/', views.landing_page, name='landingPage'),
 ]

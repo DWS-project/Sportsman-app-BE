@@ -101,10 +101,12 @@ class SportHall(models.Model):
     title = models.CharField(max_length=50)
     city = models.CharField(max_length=50)
     address = models.TextField(null=True)
+    sports = models.TextField(null=True)
     description = models.CharField(max_length=500, null=True)
     owner_id = models.ForeignKey(Owner, on_delete=models.CASCADE)
     status = models.CharField(max_length=20, null=True)
     price = models.FloatField()
+    type = models.CharField(max_length=20, null=True)
     pictures = models.TextField(null=True)
 
     def __str__(self):
