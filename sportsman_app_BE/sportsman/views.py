@@ -211,7 +211,7 @@ def logout(request):
 
 
 @api_view(['PUT'])
-def forgotPassword(request):
+def forgot_password(request):
     email = request.data.get('email')
     if (User.objects.filter(email=email).exists() == False & Owner.objects.filter(email=email).exists() == False):
         return JsonResponse({'status': False, 'message': 'Korisnik sa unesenim emailom nije registrovan'}, status=status.HTTP_404_NOT_FOUND)
@@ -243,21 +243,21 @@ def forgotPassword(request):
 
 
 @api_view(['GET'])
-def getAllPlayers(request):
+def get_all_players(request):
     users = list(User.objects.values(
         'id', 'name', 'surname', 'username', 'city', 'age', 'interests', 'picture'))
     return JsonResponse(users, safe=False, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
-def getAllOwners(request):
+def get_all_owners(request):
     owners = list(Owner.objects.values(
         'id', 'name', 'surname', 'location', 'username', 'capacity', 'picture', 'tel_number'))
     return JsonResponse(owners, safe=False, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
-def getAllSportHalls(request):
+def get_all_sport_halls(request):
     sport_halls = list(SportHall.objects.values(
         'title', 'city', 'address', 'description', 'status', 'price', 'pictures', 'owner_id'))
     return JsonResponse(sport_halls, safe=False, status=status.HTTP_200_OK)
