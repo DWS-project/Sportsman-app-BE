@@ -243,14 +243,14 @@ def forgotPassword(request):
 
 
 @api_view(['GET'])
-def getAllPlayers():
+def getAllPlayers(request):
     users = list(User.objects.values(
         'id', 'name', 'surname', 'username', 'city', 'age', 'interests', 'picture'))
     return JsonResponse(users, safe=False, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
-def getAllOwners():
+def getAllOwners(request):
     owners = list(Owner.objects.values(
         'id', 'name', 'surname', 'location', 'username', 'capacity', 'picture', 'tel_number'))
     return JsonResponse(owners, safe=False, status=status.HTTP_200_OK)
