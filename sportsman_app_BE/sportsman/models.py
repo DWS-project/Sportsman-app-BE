@@ -21,19 +21,20 @@ class User(models.Model):
     interests = models.TextField(null=True)
     picture = models.CharField(max_length=50, null=True)
     ROLE_CHOICES = (
-        ('renter', 'Renter'),
+        ('player', 'Player'),
         ('owner', 'Owner'),
     )
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='owner')
+    role = models.CharField(
+        max_length=10, choices=ROLE_CHOICES, default='player')
     access_token = models.TextField(null=True)
 
     @property
     def is_admin(self):
-        return self.role == 'admin'
+        return self.role == 'owner'
 
     @property
     def is_user(self):
-        return self.role == 'user'
+        return self.role == 'player'
 
 
 def __str__(self):
@@ -41,8 +42,10 @@ def __str__(self):
 
 
 class Friends(models.Model):
-    user1 = models.ForeignKey(User, related_name='friends1', on_delete=models.CASCADE)
-    user2 = models.ForeignKey(User, related_name='friends2', on_delete=models.CASCADE)
+    user1 = models.ForeignKey(
+        User, related_name='friends1', on_delete=models.CASCADE)
+    user2 = models.ForeignKey(
+        User, related_name='friends2', on_delete=models.CASCADE)
 
     def __str__(self):
         return str(self.user1) + " " + str(self.user2)
@@ -50,8 +53,10 @@ class Friends(models.Model):
 
 class Invitations(models.Model):
     time_sent = models.DateTimeField(null=True)
-    sender = models.ForeignKey(User, related_name='sent_invitations', on_delete=models.CASCADE)
-    recipient = models.ForeignKey(User, related_name='received_invitations', on_delete=models.CASCADE)
+    sender = models.ForeignKey(
+        User, related_name='sent_invitations', on_delete=models.CASCADE)
+    recipient = models.ForeignKey(
+        User, related_name='received_invitations', on_delete=models.CASCADE)
     status = models.IntegerField()
     details = models.TextField(null=True)
 

@@ -8,4 +8,6 @@ urlpatterns = [
          views.registration_player, name='registrationPlayer'),
     path('authentication/register-owner',
          views.registration_owner, name='registrationOwner'),
+    path('authentication/forgot-password',
+         views.forgotPassword, name='forgotPassword')
 ]
