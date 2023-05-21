@@ -20,25 +20,10 @@ class User(models.Model):
     age = models.IntegerField(null=True)
     interests = models.TextField(null=True)
     picture = models.CharField(max_length=50, null=True)
-    ROLE_CHOICES = (
-        ('player', 'Player'),
-        ('owner', 'Owner'),
-    )
-    role = models.CharField(
-        max_length=10, choices=ROLE_CHOICES, default='player')
     access_token = models.TextField(null=True)
 
-    @property
-    def is_admin(self):
-        return self.role == 'owner'
-
-    @property
-    def is_user(self):
-        return self.role == 'player'
-
-
-def __str__(self):
-    return self.email
+    def __str__(self):
+        return self.email
 
 
 class Friends(models.Model):
@@ -97,6 +82,7 @@ class Owner(models.Model):
     capacity = models.IntegerField(null=True)
     type = models.CharField(max_length=10, null=True)
     picture = models.CharField(max_length=50, null=True)
+    access_token = models.TextField(null=True)
 
     def __str__(self):
         return self.email

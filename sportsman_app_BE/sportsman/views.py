@@ -61,8 +61,7 @@ def registration_player(request):
     else:
         User.objects.create(name=name, surname=surname, username=username, email=email,
                             tel_number=tel_number, city=city, age=age, interests=interests,
-                            password=make_password(password),
-                            role='renter')
+                            password=make_password(password))
         return JsonResponse({'status': True, 'message': "Uspješno ste se registrovali."}, status=201)
 
 
@@ -153,7 +152,7 @@ def login(request):
                 "Authentication", access_token, 86400, httponly=True)
 
             response.data = {"user": {"id": user.id,
-                                      "email": user.email, "role": user.role, "username": user.username,
+                                      "email": user.email, "username": user.username,
                                       "tel_number": user.tel_number, "age": user.age, "city": user.city, "interests": user.interests,
                                       "name": user.name, "surname": user.surname, "picture": user.picture}}
             response.message = "Login successfully"
@@ -241,3 +240,17 @@ def forgotPassword(request):
                 [email],
                 fail_silently=False)
             return JsonResponse({'status': True, 'message': 'Nova lozinka Vam je poslana na '+email}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+def getAllPlayers():
+    users = list(User.objects.values(
+        'id', 'name', 'surname', 'username', 'city', 'age', 'interests', 'picture'))
+    return JsonResponse(users, safe=False, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+def getAllOwners():
+    owners = list(Owner.objects.values(
+        'id', 'name', 'surname', 'location', 'username', 'capacity', 'picture', 'tel_number'))
+    return JsonResponse(owners, safe=False, status=status.HTTP_200_OK)
