@@ -55,14 +55,14 @@ def registration_player(request):
         interests = json.dumps({"interests": sports})
     user = User.objects.filter(email=email)
     if password != repeated_password:
-        return JsonResponse({'status': False, 'message': "Lozinke se ne podudaraju"}, status=400)
+        return JsonResponse({'status': False, 'message': "Lozinke se ne podudaraju"}, status=status.HTTP_400_BAD_REQUEST)
     elif len(user) > 0:
-        return JsonResponse({'status': False, 'message': "Email je već registrovan."}, status=400)
+        return JsonResponse({'status': False, 'message': "Email je već registrovan."}, status=status.HTTP_400_BAD_REQUEST)
     else:
         User.objects.create(name=name, surname=surname, username=username, email=email,
                             tel_number=tel_number, city=city, age=age, interests=interests,
                             password=make_password(password))
-        return JsonResponse({'status': True, 'message': "Uspješno ste se registrovali."}, status=201)
+        return JsonResponse({'status': True, 'message': "Uspješno ste se registrovali."}, status=status.HTTP_201_CREATED)
 
 
 @swagger_auto_schema(
@@ -108,14 +108,14 @@ def registration_owner(request):
     owner = Owner.objects.filter(email=email)
 
     if password != repeated_password:
-        return JsonResponse({'status': False, 'message': "Lozinke se ne podudaraju"}, status=400)
+        return JsonResponse({'status': False, 'message': "Lozinke se ne podudaraju"}, status=status.HTTP_400_BAD_REQUEST)
     elif len(owner) > 0:
-        return JsonResponse({'status': False, 'message': "Email je već registrovan."}, status=400)
+        return JsonResponse({'status': False, 'message': "Email je već registrovan."}, status=status.HTTP_400_BAD_REQUEST)
     else:
         Owner.objects.create(name=name, surname=surname, username=username, email=email,
                              tel_number=tel_number, location=location, capacity=capacity, type=type_of_user,
                              password=make_password(password))
-        return JsonResponse({'status': True, 'message': "Uspješno ste se registrovali."}, status=201)
+        return JsonResponse({'status': True, 'message': "Uspješno ste se registrovali."}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 @swagger_auto_schema(
@@ -293,3 +293,47 @@ def get_all_sport_halls(request):
     sport_halls = list(SportHall.objects.values(
         'title', 'city', 'address', 'description', 'status', 'price', 'pictures', 'owner_id'))
     return JsonResponse(sport_halls, safe=False, status=status.HTTP_200_OK)
+
+
+@swagger_auto_schema(
+    tags=['Sport Hall'],
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'title': openapi.Schema(type=openapi.TYPE_STRING),
+            'city': openapi.Schema(type=openapi.TYPE_STRING),
+            'address': openapi.Schema(type=openapi.TYPE_STRING),
+            'description': openapi.Schema(type=openapi.TYPE_STRING),
+            'status': openapi.Schema(type=openapi.TYPE_STRING),
+            'price': openapi.Schema(type=openapi.TYPE_NUMBER),
+            'capacity': openapi.Schema(type=openapi.TYPE_INTEGER),
+            'owner_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+            'pictures': openapi.Schema(type=openapi.TYPE_FILE, format=openapi.FORMAT_BINARY),
+        },
+        required=['title', 'city', 'address', 'description',
+                  'status', 'price', 'capacity', 'owner_id'],
+    ),
+    responses={
+        200: 'Successful response',
+        400: 'Bad Request',
+    },
+)
+@api_view(['POST'])
+def add_new_sport_hall(request):
+    data = request.data
+    title = data.get('title')
+    city = data.get('city')
+    address = data.get('address')
+    description = data.get('description')
+    sport_hall_status = data.get('status')
+    price = data.get('price')
+    capacity = data.get('capacity')
+    owner_id = data.get('owner_id')
+
+    if owner_id is not None:
+        SportHall.objects.create(title=title, city=city, address=address,
+                                 description=description, status=sport_hall_status, price=price, capacity=capacity, owner_id_id=owner_id)
+        return Response({'data': {title, city, address, description,  price}, 'message': 'Uspješno kreiran novi teren.'}, status=status.HTTP_200_OK)
+    else:
+        return JsonResponse({'data': {}, 'message': 'Došlo je do greške.'}, status=status.HTTP_400_BAD_REQUEST)

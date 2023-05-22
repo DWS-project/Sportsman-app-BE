@@ -13,4 +13,5 @@ urlpatterns = [
     path('players', views.get_all_players, name='getAllUsers'),
     path('owners', views.get_all_owners, name='getAllOwners'),
     path('sport-halls', views.get_all_sport_halls, name='getAllSportHalls'),
+    path('add-sport-hall', views.add_new_sport_hall, name='addNewSportHall'),
 ]

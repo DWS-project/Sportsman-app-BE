@@ -19,7 +19,7 @@ class User(models.Model):
     tel_number = models.CharField(max_length=20, null=True)
     age = models.IntegerField(null=True)
     interests = models.TextField(null=True)
-    picture = models.CharField(max_length=50, null=True)
+    picture = models.ImageField(null=True)
     access_token = models.TextField(null=True)
 
     def __str__(self):
@@ -81,7 +81,7 @@ class Owner(models.Model):
     tel_number = models.CharField(max_length=20, null=True)
     capacity = models.IntegerField(null=True)
     type = models.CharField(max_length=10, null=True)
-    picture = models.CharField(max_length=50, null=True)
+    picture = models.ImageField(null=True)
     access_token = models.TextField(null=True)
 
     def __str__(self):
@@ -96,7 +96,8 @@ class SportHall(models.Model):
     owner_id = models.ForeignKey(Owner, on_delete=models.CASCADE)
     status = models.CharField(max_length=20, null=True)
     price = models.FloatField()
-    pictures = models.TextField(null=True)
+    pictures = models.ImageField(null=True)
+    capacity = models.IntegerField(null=True)
 
     def __str__(self):
         return "title: " + str(self.title) + " owner: " + str(self.owner_id)
