@@ -4,7 +4,6 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import api_view
 from django.contrib.auth.hashers import make_password, check_password
-from .helpers import send_confirmation_email
 from .models import *
 from django.utils.crypto import get_random_string
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -47,7 +46,7 @@ def registration_player(request):
     email = data.get('email')
     tel_number = data.get('tel_number')
     password = data.get('password')
-    repeated_password = data.get('repeated_password')
+    repeated_password = data.get('repeatedPassword')
     city = data.get('city')
     age = data.get('age')
     sports = data.get('interests')
@@ -64,12 +63,7 @@ def registration_player(request):
         User.objects.create(name=name, surname=surname, username=username, email=email,
                             tel_number=tel_number, city=city, age=age, interests=interests,
                             password=make_password(password))
-<<<<<<< Updated upstream
         return JsonResponse({'status': True, 'message': "Uspješno ste se registrovali."}, status=status.HTTP_201_CREATED)
-=======
-
-        return JsonResponse({'status': True, 'message': "Uspješno ste se registrovali."}, status=201)
->>>>>>> Stashed changes
 
 
 @swagger_auto_schema(
@@ -147,22 +141,20 @@ def login(request):
     email = data.get('email', None)
     password = data.get('password', None)
 
-    if User.objects.filter(email=email).exists():
+    if (User.objects.filter(email=email).exists() == True):
         user = User.objects.get(email=email)
         is_password_valid = check_password(password, user.password)
         if is_password_valid:
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh)
             user.access_token = access_token
-            user.save()
 
             response.set_cookie(
                 "Authentication", access_token, 86400, httponly=True)
 
             response.data = {"user": {"id": user.id,
                                       "email": user.email, "username": user.username,
-                                      "tel_number": user.tel_number, "age": user.age, "city": user.city,
-                                      "interests": user.interests,
+                                      "tel_number": user.tel_number, "age": user.age, "city": user.city, "interests": user.interests,
                                       "name": user.name, "surname": user.surname, "picture": user.picture}}
             response.message = "Login successfully"
 
@@ -172,7 +164,7 @@ def login(request):
                              "data": {},
                              }, status=status.HTTP_400_BAD_REQUEST)
 
-    elif Owner.objects.filter(email=email).exists():
+    elif (Owner.objects.filter(email=email).exists() == True):
         owner = Owner.objects.get(email=email)
         is_password_valid = check_password(password, owner.password)
 
@@ -180,7 +172,6 @@ def login(request):
             refresh = RefreshToken.for_user(owner)
             access_token = str(refresh)
             owner.access_token = access_token
-            owner.save()
 
             response.set_cookie(
                 "Authentication", access_token, 86400, httponly=True)
@@ -188,8 +179,7 @@ def login(request):
             response.data = {"owner": {"id": owner.id,
                                        "email": owner.email, "username": owner.username,
                                        "tel_number": owner.tel_number, "location": owner.location,
-                                       "capacity": owner.capacity, "name": owner.name, "surname": owner.surname,
-                                       "picture": owner.picture}}
+                                       "capacity": owner.capacity, "name": owner.name, "surname": owner.surname, "picture": owner.picture}}
             response.message = "Login successfully"
 
             return response
@@ -239,11 +229,10 @@ def logout(request):
 @api_view(['PUT'])
 def forgot_password(request):
     email = request.data.get('email')
-    if User.objects.filter(email=email).exists() == False & Owner.objects.filter(email=email).exists() == False:
-        return JsonResponse({'status': False, 'message': 'Korisnik sa unesenim emailom nije registrovan'},
-                            status=status.HTTP_404_NOT_FOUND)
+    if (User.objects.filter(email=email).exists() == False & Owner.objects.filter(email=email).exists() == False):
+        return JsonResponse({'status': False, 'message': 'Korisnik sa unesenim emailom nije registrovan'}, status=status.HTTP_404_NOT_FOUND)
     else:
-        if User.objects.filter(email=email).exists():
+        if (User.objects.filter(email=email).exists() == True):
             password = get_random_string(8)
             user = User.objects.get(email=email)
             user.password = make_password(password)
@@ -254,9 +243,8 @@ def forgot_password(request):
                 'redroseb1206@gmail.com',
                 [email],
                 fail_silently=False)
-            return JsonResponse({'status': True, 'message': 'Nova lozinka Vam je poslana na ' + email},
-                                status=status.HTTP_200_OK)
-        elif Owner.objects.filter(email=email).exists():
+            return JsonResponse({'status': True, 'message': 'Nova lozinka Vam je poslana na '+email}, status=status.HTTP_200_OK)
+        elif (Owner.objects.filter(email=email).exists() == True):
             password = get_random_string(8)
             owner = Owner.objects.get(email=email)
             owner.password = make_password(password)
@@ -267,8 +255,7 @@ def forgot_password(request):
                 'redroseb1206@gmail.com',
                 [email],
                 fail_silently=False)
-            return JsonResponse({'status': True, 'message': 'Nova lozinka Vam je poslana na ' + email},
-                                status=status.HTTP_200_OK)
+            return JsonResponse({'status': True, 'message': 'Nova lozinka Vam je poslana na '+email}, status=status.HTTP_200_OK)
 
 
 @swagger_auto_schema(
@@ -309,19 +296,11 @@ def get_all_owners(request):
 @api_view(['GET'])
 def get_all_sport_halls(request):
     sport_halls = list(SportHall.objects.values(
-<<<<<<< Updated upstream
         'title', 'city', 'address', 'description', 'status', 'price', 'pictures', 'owner_id', 'id'))
-=======
-        'title', 'city', 'address', 'description', 'status', 'price', 'pictures', 'owner_id'))
-
-    send_confirmation_email(User.objects.get(email='azra@valens.dev'))
-
->>>>>>> Stashed changes
     return JsonResponse(sport_halls, safe=False, status=status.HTTP_200_OK)
 
 
 @swagger_auto_schema(
-<<<<<<< Updated upstream
     tags=['Sport Hall'],
     method='post',
     request_body=openapi.Schema(
@@ -441,14 +420,26 @@ def remove_sport_hall(request):
         return JsonResponse({'message': "Uspješno uklonjen teren.", 'data': {}}, status=status.HTTP_200_OK)
     except SportHall.DoesNotExist:
         return JsonResponse({'message': "Došlo je do greške.", 'data': {}}, status=status.HTTP_404_NOT_FOUND)
-=======
+
+
+@swagger_auto_schema(
     tags=['Authentication'],
     method='post',
-    request_query=openapi.Parameter('test', openapi.IN_QUERY, description="test manual param",
-                                    type=openapi.TYPE_BOOLEAN)
+    manual_parameters=[
+        openapi.Parameter('token', openapi.IN_QUERY, description='Token',
+                          type=openapi.TYPE_STRING),
+    ],
+    responses={
+        200: openapi.Response(description='Success', schema=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'token': openapi.Schema(type=openapi.TYPE_STRING, description='Token'),
+            }
+        )),
+        404: "Not Found",
+        500: "Internal Server Error"
+    }
 )
-# test_param =
-
 @api_view(['POST'])
 def confirm_email(request):
     token = request.GET.get('token')
@@ -489,4 +480,3 @@ def confirm_email(request):
         return Response({"message": "Korisnik ne postoji",
                          "data": {},
                          }, status=status.HTTP_404_NOT_FOUND)
->>>>>>> Stashed changes
