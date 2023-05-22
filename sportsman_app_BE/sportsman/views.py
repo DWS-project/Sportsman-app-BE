@@ -398,6 +398,16 @@ def get_sport_hall(request):
 @swagger_auto_schema(
     tags=['Sport Hall'],
     method='delete',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'sporthall_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the sport hall'),
+        },
+        required=['sporthall_id'],
+        example={
+            'sporthall_id': 1
+        }
+    ),
     responses={
         200: openapi.Response(description='Success', schema=openapi.Schema(
             type=openapi.TYPE_OBJECT,
@@ -406,8 +416,8 @@ def get_sport_hall(request):
                 'data': openapi.Schema(type=openapi.TYPE_OBJECT, properties={})
             }
         )),
-        404: "Not Found",
-        500: "Internal Server Error"
+        404: openapi.Response(description='Not Found'),
+        500: openapi.Response(description='Internal Server Error')
     }
 )
 @api_view(['DELETE'])
@@ -420,3 +430,46 @@ def remove_sport_hall(request):
         return JsonResponse({'message': "Uspješno uklonjen teren.", 'data': {}}, status=status.HTTP_200_OK)
     except SportHall.DoesNotExist:
         return JsonResponse({'message': "Došlo je do greške.", 'data': {}}, status=status.HTTP_404_NOT_FOUND)
+
+
+@swagger_auto_schema(
+    tags=['Sport Hall'],
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'sporthall_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the sport hall'),
+            'status': openapi.Schema(type=openapi.TYPE_STRING, description='New status for the sport hall'),
+        },
+        required=['sporthall_id', 'status'],
+        example={
+            'sporthall_id': 1,
+            'status': 'open'
+        }
+    ),
+    responses={
+        200: openapi.Response(description='Success', schema=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'message': openapi.Schema(type=openapi.TYPE_STRING, description='A message indicating the result'),
+                'data': openapi.Schema(type=openapi.TYPE_OBJECT, properties={})
+            }
+        )),
+        404: "Not Found",
+        500: "Internal Server Error"
+    }
+)
+@api_view(['POST'])
+def change_sporthall_status(request):
+    data = request.data
+    sporthall_id = data.get('sporthall_id')
+    status = data.get('status')
+
+    try:
+        sporthall = SportHall.objects.get(id=sporthall_id)
+        sporthall.status = status
+        sporthall.save()
+        obj = serializers.serialize('json', sporthall)
+        return JsonResponse({'data': json.loads(obj)}, status=200)
+    except:
+        return JsonResponse({'data': {}}, status=400)
