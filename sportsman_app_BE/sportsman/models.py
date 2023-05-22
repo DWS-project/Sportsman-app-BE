@@ -103,6 +103,11 @@ class SportHall(models.Model):
         return "title: " + str(self.title) + " owner: " + str(self.owner_id)
 
 
+class Owner_SportHall(models.Model):
+    owner_id = models.ForeignKey(Owner, on_delete=models.CASCADE)
+    sporthall_id = models.ForeignKey(SportHall, on_delete=models.CASCADE)
+
+
 class Games(models.Model):
     hall_name = models.CharField(max_length=50)
     team_id = models.ForeignKey(Team, on_delete=models.CASCADE)

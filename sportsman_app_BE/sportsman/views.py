@@ -10,6 +10,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import status
 from rest_framework.response import Response
 from django.core.mail import send_mail
+from django.core import serializers
 
 
 # Create your views here.
@@ -341,3 +342,54 @@ def add_new_sport_hall(request):
         return Response({'data': {title, city, address, description,  price}, 'message': 'Uspješno kreiran novi teren.'}, status=status.HTTP_200_OK)
     else:
         return JsonResponse({'data': {}, 'message': 'Došlo je do greške.'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@swagger_auto_schema(
+    tags=['Sport Hall'],
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'owner_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the owner'),
+            'sporthall_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the sport hall'),
+        },
+        required=['owner_id', 'sporthall_id'],
+        example={
+            'owner_id': 1,
+            'sporthall_id': 2
+        }
+    ),
+    responses={
+        200: openapi.Response(description='Success', schema=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'status': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Indicates if the request was successful'),
+                'message': openapi.Schema(type=openapi.TYPE_STRING, description='A message indicating the result')
+            }
+        )),
+        404: "Not Found",
+        500: "Internal Server Error"
+    }
+)
+@api_view(['POST'])
+def get_sport_hall(request):
+    data = request.data
+    owner_id = data.get('owner_id')
+    sporthall_id = data.get('sporthall_id')
+    owner = Owner.objects.get(id=owner_id)
+    sporthall = SportHall.objects.get(id=sporthall_id)
+    array_of_sporthalls = []
+    array_of_sporthalls.append(owner)
+    array_of_sporthalls.append(sporthall)
+    try:
+        sporthalls_of_owner = Owner_SportHall.objects.filter(
+            owner_id_id=owner_id)
+        for sport_hall in sporthalls_of_owner:
+            if (int(sport_hall.owner_id_id) == int(owner_id)):
+                array_of_sporthalls.append(sport_hall)
+                break
+    except:
+        obj = serializers.serialize('json', array_of_sporthalls)
+        return JsonResponse({'data': json.loads(obj)}, status=status.HTTP_404_NOT_FOUND)
+    obj = serializers.serialize('json', array_of_sporthalls)
+    return JsonResponse({'data': json.loads(obj)}, status=status.HTTP_200_OK)
