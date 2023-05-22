@@ -4,6 +4,8 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import api_view
 from django.contrib.auth.hashers import make_password, check_password
+
+from .helpers import send_confirmation_email
 from .models import *
 from django.utils.crypto import get_random_string
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -63,6 +65,8 @@ def registration_player(request):
         User.objects.create(name=name, surname=surname, username=username, email=email,
                             tel_number=tel_number, city=city, age=age, interests=interests,
                             password=make_password(password))
+        send_confirmation_email(user)
+
         return JsonResponse({'status': True, 'message': "Uspješno ste se registrovali."}, status=status.HTTP_201_CREATED)
 
 
@@ -116,6 +120,7 @@ def registration_owner(request):
         Owner.objects.create(name=name, surname=surname, username=username, email=email,
                              tel_number=tel_number, location=location, capacity=capacity, type=type_of_user,
                              password=make_password(password))
+        send_confirmation_email(owner)
         return JsonResponse({'status': True, 'message': "Uspješno ste se registrovali."}, status=status.HTTP_401_UNAUTHORIZED)
 
 
