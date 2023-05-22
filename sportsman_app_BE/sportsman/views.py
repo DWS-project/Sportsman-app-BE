@@ -258,6 +258,7 @@ def forgot_password(request):
 
 
 @swagger_auto_schema(
+    tags=['Player'],
     method='get',
     responses={
         200: "OK",
@@ -271,6 +272,7 @@ def get_all_players(request):
 
 
 @swagger_auto_schema(
+    tags=['Owner'],
     method='get',
     responses={
         200: "OK",
@@ -284,6 +286,7 @@ def get_all_owners(request):
 
 
 @swagger_auto_schema(
+    tags=['Sport Hall'],
     method='get',
     responses={
         200: "OK",
