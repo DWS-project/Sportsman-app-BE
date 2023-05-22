@@ -296,7 +296,7 @@ def get_all_owners(request):
 @api_view(['GET'])
 def get_all_sport_halls(request):
     sport_halls = list(SportHall.objects.values(
-        'title', 'city', 'address', 'description', 'status', 'price', 'pictures', 'owner_id'))
+        'title', 'city', 'address', 'description', 'status', 'price', 'pictures', 'owner_id', 'id'))
     return JsonResponse(sport_halls, safe=False, status=status.HTTP_200_OK)
 
 
