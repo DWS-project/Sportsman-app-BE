@@ -29,12 +29,12 @@ from django.core import serializers
             'email': openapi.Schema(type=openapi.TYPE_STRING, description='The email field'),
             'tel_number': openapi.Schema(type=openapi.TYPE_STRING, description='The telephone number field'),
             'password': openapi.Schema(type=openapi.TYPE_STRING, description='The password field'),
-            'repeated_password': openapi.Schema(type=openapi.TYPE_STRING, description='The repeated password field'),
+            'repeatedPassword': openapi.Schema(type=openapi.TYPE_STRING, description='The repeated password field'),
             'city': openapi.Schema(type=openapi.TYPE_STRING, description='The city field'),
             'age': openapi.Schema(type=openapi.TYPE_INTEGER, description='The age field'),
             'sports': openapi.Schema(type=openapi.TYPE_STRING, description='The interests field'),
         },
-        required=['name', 'surname', 'username', 'email', 'tel_number', 'password', 'repeated_password', 'city', 'age',
+        required=['name', 'surname', 'username', 'email', 'tel_number', 'password', 'repeatedPassword', 'city', 'age',
                   'sports']
 
     )
