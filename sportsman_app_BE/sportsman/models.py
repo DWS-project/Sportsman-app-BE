@@ -25,7 +25,6 @@ class User(models.Model):
     last_login = models.DateTimeField(null=True)
     email_confirmed = models.BooleanField(default=False)
 
-
     def __str__(self):
         return self.email
 
@@ -90,7 +89,6 @@ class Owner(models.Model):
     confirmation_token = models.TextField(null=True)
     last_login = models.DateTimeField(null=True)
     email_confirmed = models.BooleanField(default=False)
-
 
     def __str__(self):
         return self.email
