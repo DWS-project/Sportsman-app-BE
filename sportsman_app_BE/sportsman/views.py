@@ -211,6 +211,7 @@ def logout(request):
 
 
 @swagger_auto_schema(
+    tags=['Authentication'],
     method='put',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
