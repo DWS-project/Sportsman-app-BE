@@ -15,4 +15,5 @@ urlpatterns = [
     path('sport-halls', views.get_all_sport_halls, name='getAllSportHalls'),
     path('add-sport-hall', views.add_new_sport_hall, name='addNewSportHall'),
     path('get-sport-hall', views.get_sport_hall, name='getSportHall'),
+    path('remove-sport-hall', views.remove_sport_hall, name='removeSportHall'),
 ]

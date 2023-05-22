@@ -393,3 +393,30 @@ def get_sport_hall(request):
         return JsonResponse({'data': json.loads(obj)}, status=status.HTTP_404_NOT_FOUND)
     obj = serializers.serialize('json', array_of_sporthalls)
     return JsonResponse({'data': json.loads(obj)}, status=status.HTTP_200_OK)
+
+
+@swagger_auto_schema(
+    tags=['Sport Hall'],
+    method='delete',
+    responses={
+        200: openapi.Response(description='Success', schema=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'message': openapi.Schema(type=openapi.TYPE_STRING, description='A message indicating the result'),
+                'data': openapi.Schema(type=openapi.TYPE_OBJECT, properties={})
+            }
+        )),
+        404: "Not Found",
+        500: "Internal Server Error"
+    }
+)
+@api_view(['DELETE'])
+def remove_sport_hall(request):
+    sporthall_id = request.data.get('sporthall_id')
+
+    try:
+        sporthall = SportHall.objects.get(id=sporthall_id)
+        sporthall.delete()
+        return JsonResponse({'message': "Uspješno uklonjen teren.", 'data': {}}, status=status.HTTP_200_OK)
+    except SportHall.DoesNotExist:
+        return JsonResponse({'message': "Došlo je do greške.", 'data': {}}, status=status.HTTP_404_NOT_FOUND)
