@@ -19,30 +19,18 @@ class User(models.Model):
     tel_number = models.CharField(max_length=20, null=True)
     age = models.IntegerField(null=True)
     interests = models.TextField(null=True)
-    picture = models.CharField(max_length=50, null=True)
-    ROLE_CHOICES = (
-        ('renter', 'Renter'),
-        ('owner', 'Owner'),
-    )
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='owner')
+    picture = models.ImageField(null=True)
     access_token = models.TextField(null=True)
 
-    @property
-    def is_admin(self):
-        return self.role == 'admin'
-
-    @property
-    def is_user(self):
-        return self.role == 'user'
-
-
-def __str__(self):
-    return self.email
+    def __str__(self):
+        return self.email
 
 
 class Friends(models.Model):
-    user1 = models.ForeignKey(User, related_name='friends1', on_delete=models.CASCADE)
-    user2 = models.ForeignKey(User, related_name='friends2', on_delete=models.CASCADE)
+    user1 = models.ForeignKey(
+        User, related_name='friends1', on_delete=models.CASCADE)
+    user2 = models.ForeignKey(
+        User, related_name='friends2', on_delete=models.CASCADE)
 
     def __str__(self):
         return str(self.user1) + " " + str(self.user2)
@@ -50,8 +38,10 @@ class Friends(models.Model):
 
 class Invitations(models.Model):
     time_sent = models.DateTimeField(null=True)
-    sender = models.ForeignKey(User, related_name='sent_invitations', on_delete=models.CASCADE)
-    recipient = models.ForeignKey(User, related_name='received_invitations', on_delete=models.CASCADE)
+    sender = models.ForeignKey(
+        User, related_name='sent_invitations', on_delete=models.CASCADE)
+    recipient = models.ForeignKey(
+        User, related_name='received_invitations', on_delete=models.CASCADE)
     status = models.IntegerField()
     details = models.TextField(null=True)
 
@@ -91,7 +81,8 @@ class Owner(models.Model):
     tel_number = models.CharField(max_length=20, null=True)
     capacity = models.IntegerField(null=True)
     type = models.CharField(max_length=10, null=True)
-    picture = models.CharField(max_length=50, null=True)
+    picture = models.ImageField(null=True)
+    access_token = models.TextField(null=True)
 
     def __str__(self):
         return self.email
@@ -108,9 +99,15 @@ class SportHall(models.Model):
     price = models.FloatField()
     type = models.CharField(max_length=20, null=True)
     pictures = models.TextField(null=True)
+    capacity = models.IntegerField(null=True)
 
     def __str__(self):
         return "title: " + str(self.title) + " owner: " + str(self.owner_id)
+
+
+class Owner_SportHall(models.Model):
+    owner_id = models.ForeignKey(Owner, on_delete=models.CASCADE)
+    sporthall_id = models.ForeignKey(SportHall, on_delete=models.CASCADE)
 
 
 class Games(models.Model):
