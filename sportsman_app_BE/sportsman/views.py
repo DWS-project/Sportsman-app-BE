@@ -188,29 +188,47 @@ def logout(request):
     response.data = {"message": "Logged out successfully"}
     return response
 
+@swagger_auto_schema(
+    tags=['Landing-page'],
+    method='get',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'price': openapi.Schema(type=openapi.TYPE_STRING, description='The price field'),
+            'city': openapi.Schema(type=openapi.TYPE_STRING, description='The city field'),
+            'date': openapi.Schema(type=openapi.TYPE_STRING, description='The date field'),
+            'time': openapi.Schema(type=openapi.TYPE_STRING, description='The time field'),
+            'text': openapi.Schema(type=openapi.TYPE_STRING, description='The searchbar text field'),
+            'sort_type': openapi.Schema(type=openapi.TYPE_STRING, description='The type sorting field'),
+            'sort_price': openapi.Schema(type=openapi.TYPE_STRING, description='The price sorting field'),
+            'sports': openapi.Schema(type=openapi.TYPE_STRING, description='The sports field'),
+            'type': openapi.Schema(type=openapi.TYPE_INTEGER, description='The type field'),
+        },
+        required=['price', 'city', 'date', 'time', 'text', 'sort_type', 'sort_price', 'sports', 'type']
+    )
+)
 @api_view(['GET'])
 def landing_page(request):
-    selected_price = request.GET.get('price')
-    selected_city = request.GET.get('city')
-    selected_sports = request.GET.getlist('sports[]')
-    selected_type = request.GET.getlist('type[]')
-    selected_date = request.GET.get('date')
-    selected_time = request.GET.get('time')
+    price = request.GET.get('price')
+    city = request.GET.get('city')
+    sports = request.GET.getlist('sports[]')
+    type = request.GET.getlist('type[]')
+    date = request.GET.get('date')
+    time = request.GET.get('time')
     search_text = request.GET.get('searchText')
     sort_type = request.GET.get('sort_type')
     sort_price = request.GET.get('sort_price')
 
     queryset = SportHall.objects.all()
 
-    # Apply filters based on selected options
-    if selected_city:
-        queryset = queryset.filter(city=selected_city)
+    if city:
+        queryset = queryset.filter(city=city)
 
-    if selected_type:
-        queryset = queryset.filter(type__in=selected_type)
+    if type:
+        queryset = queryset.filter(type__in=type)
 
-    if selected_price:
-        queryset = queryset.filter(price__lte=selected_price)
+    if price:
+        queryset = queryset.filter(price__lte=price)
 
     if search_text:
         queryset = queryset.filter(title__icontains=search_text)
@@ -220,6 +238,7 @@ def landing_page(request):
             queryset = queryset.order_by('type')
         elif sort_type == 'Vanjski':
             queryset = queryset.order_by('-type')
+
     if sort_price:
         if sort_price == 'Najjeftiniji':
             queryset = queryset.order_by('price')
@@ -228,10 +247,9 @@ def landing_page(request):
 
     filtered_items = []
     for item in queryset:
-        sports_string = item.sports  # Get the string representation of the sports object
-        sports_list = json.loads(sports_string)  # Convert the string to a Python object (dictionary or list)
-        if any(sport in sports_list['sports'] for sport in selected_sports):
+        sports_string = item.sports
+        sports_list = json.loads(sports_string)
+        if any(sport in sports_list['sports'] for sport in sports):
             filtered_items.append(model_to_dict(item))
 
-    print(filtered_items)
     return JsonResponse({'data': filtered_items})
