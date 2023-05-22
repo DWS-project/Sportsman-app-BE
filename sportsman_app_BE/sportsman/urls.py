@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, re_path
 from . import views
 
 urlpatterns = [
@@ -10,6 +10,7 @@ urlpatterns = [
          views.registration_owner, name='registrationOwner'),
     path('authentication/forgot-password',
          views.forgot_password, name='forgotPassword'),
+    re_path(r'^authentication/confirm-email/$', views.confirm_email, name='confirm_email'),
     path('players', views.get_all_players, name='getAllUsers'),
     path('owners', views.get_all_owners, name='getAllOwners'),
     path('sport-halls', views.get_all_sport_halls, name='getAllSportHalls'),

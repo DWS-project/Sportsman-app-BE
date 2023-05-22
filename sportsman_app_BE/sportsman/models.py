@@ -21,6 +21,10 @@ class User(models.Model):
     interests = models.TextField(null=True)
     picture = models.ImageField(null=True)
     access_token = models.TextField(null=True)
+    confirmation_token = models.TextField(null=True)
+    last_login = models.DateTimeField(null=True)
+    email_confirmed = models.BooleanField(default=False)
+
 
     def __str__(self):
         return self.email
@@ -83,6 +87,10 @@ class Owner(models.Model):
     type = models.CharField(max_length=10, null=True)
     picture = models.ImageField(null=True)
     access_token = models.TextField(null=True)
+    confirmation_token = models.TextField(null=True)
+    last_login = models.DateTimeField(null=True)
+    email_confirmed = models.BooleanField(default=False)
+
 
     def __str__(self):
         return self.email
