@@ -1,95 +1,339 @@
-from django.core.exceptions import ObjectDoesNotExist
-from django.http import JsonResponse
-from rest_framework.decorators import api_view
-from django.contrib.auth.hashers import make_password
-from django.contrib.auth.hashers import check_password
 import json
+import datetime
 
-from rest_framework.response import Response
-
+import firebase_admin
+from django.http import JsonResponse
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework.decorators import api_view
+from django.contrib.auth.hashers import make_password, check_password
 from .models import *
+from django.utils.crypto import get_random_string
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework import status
+from rest_framework.response import Response
+from django.core.mail import send_mail
+from firebase_admin import storage
 
 
 # Create your views here.
 
+@swagger_auto_schema(
+    tags=['Authentication'],
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'name': openapi.Schema(type=openapi.TYPE_STRING, description='The name field'),
+            'surname': openapi.Schema(type=openapi.TYPE_STRING, description='The surname field'),
+            'username': openapi.Schema(type=openapi.TYPE_STRING, description='The username field'),
+            'email': openapi.Schema(type=openapi.TYPE_STRING, description='The email field'),
+            'tel_number': openapi.Schema(type=openapi.TYPE_STRING, description='The telephone number field'),
+            'password': openapi.Schema(type=openapi.TYPE_STRING, description='The password field'),
+            'repeated_password': openapi.Schema(type=openapi.TYPE_STRING, description='The repeated password field'),
+            'city': openapi.Schema(type=openapi.TYPE_STRING, description='The city field'),
+            'age': openapi.Schema(type=openapi.TYPE_INTEGER, description='The age field'),
+            'sports': openapi.Schema(type=openapi.TYPE_STRING, description='The interests field'),
+        },
+        required=['name', 'surname', 'username', 'email', 'tel_number', 'password', 'repeated_password', 'city', 'age',
+                  'sports']
+
+    )
+)
 @api_view(['POST'])
-def registrationPlayer(request):
-    name = request.data.get('name')
-    surname = request.data.get('surname')
-    username = request.data.get('username')
-    email = request.data.get('email')
-    phone = request.data.get('phone')
-    password = request.data.get('password')
-    repeatedPassword = request.data.get('repeatedPassword')
-    city = request.data.get('city')
-    age = request.data.get('age')
-    sports = request.data.get('interests')
+def registration_player(request):
+    data = request.data
+    name = data.get('name')
+    surname = data.get('surname')
+    username = data.get('username')
+    email = data.get('email')
+    tel_number = data.get('tel_number')
+    password = data.get('password')
+    repeated_password = data.get('repeatedPassword')
+    city = data.get('city')
+    age = data.get('age')
+    sports = data.get('interests')
     if not sports:
         interests = ""
     else:
         interests = json.dumps({"interests": sports})
     user = User.objects.filter(email=email)
-    if password != repeatedPassword:
+    if password != repeated_password:
         return JsonResponse({'status': False, 'message': "Lozinke se ne podudaraju"}, status=400)
     elif len(user) > 0:
         return JsonResponse({'status': False, 'message': "Email je već registrovan."}, status=400)
     else:
         User.objects.create(name=name, surname=surname, username=username, email=email,
-                            tel_number=phone, city=city, age=age, interests=interests,
+                            tel_number=tel_number, city=city, age=age, interests=interests,
                             password=make_password(password))
         return JsonResponse({'status': True, 'message': "Uspješno ste se registrovali."}, status=201)
 
+
+@swagger_auto_schema(
+    tags=['Authentication'],
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'name': openapi.Schema(type=openapi.TYPE_STRING, description='The name field'),
+            'surname': openapi.Schema(type=openapi.TYPE_STRING, description='The surname field'),
+            'username': openapi.Schema(type=openapi.TYPE_STRING, description='The username field'),
+            'email': openapi.Schema(type=openapi.TYPE_STRING, description='The email field'),
+            'tel_number': openapi.Schema(type=openapi.TYPE_STRING, description='The telephone number field'),
+            'password': openapi.Schema(type=openapi.TYPE_STRING, description='The password field'),
+            'repeated_password': openapi.Schema(type=openapi.TYPE_STRING, description='The repeated password field'),
+            'city': openapi.Schema(type=openapi.TYPE_STRING, description='The city field'),
+            'capacity': openapi.Schema(type=openapi.TYPE_INTEGER, description='The capacity field'),
+            'street': openapi.Schema(type=openapi.TYPE_STRING, description='The street field'),
+            'streetNumber': openapi.Schema(type=openapi.TYPE_STRING, description='The street number field'),
+            'type': openapi.Schema(type=openapi.TYPE_STRING, description='The type field'),
+        },
+        required=['name', 'surname', 'username', 'email', 'tel_number', 'password', 'repeated_password', 'city',
+                  'capacity', 'street', 'streetNumber', 'type']
+    )
+)
 @api_view(['POST'])
-def registrationOwner(request):
-    name = request.data.get('name')
-    surname = request.data.get('surname')
-    username = request.data.get('username')
-    email = request.data.get('email')
-    phone = request.data.get('phone')
-    password = request.data.get('password')
-    repeatedPassword = request.data.get('repeatedPassword')
-    city = request.data.get('city')
-    capacity = request.data.get('capacity')
-    street = request.data.get('street')
-    streetNumber = request.data.get('streetNumber')
-    type = request.data.get('type')
-    location = json.dumps({"city": city, "street": street, "streetNumber": streetNumber})
+def registration_owner(request):
+    data = request.data
+    name = data.get('name')
+    surname = data.get('surname')
+    username = data.get('username')
+    email = data.get('email')
+    tel_number = data.get('tel_number')
+    password = data.get('password')
+    repeated_password = data.get('repeatedPassword')
+    city = data.get('city')
+    capacity = data.get('capacity')
+    street = data.get('street')
+    street_number = data.get('streetNumber')
+    type_of_user = data.get('type')
+    location = json.dumps(
+        {"city": city, "street": street, "streetNumber": street_number})
     owner = Owner.objects.filter(email=email)
 
-    if password != repeatedPassword:
+    if password != repeated_password:
         return JsonResponse({'status': False, 'message': "Lozinke se ne podudaraju"}, status=400)
     elif len(owner) > 0:
         return JsonResponse({'status': False, 'message': "Email je već registrovan."}, status=400)
     else:
         Owner.objects.create(name=name, surname=surname, username=username, email=email,
-                            tel_number=phone, location=location, capacity=capacity, type=type,
-                            password=make_password(password))
+                             tel_number=tel_number, location=location, capacity=capacity, type=type_of_user,
+                             password=make_password(password))
         return JsonResponse({'status': True, 'message': "Uspješno ste se registrovali."}, status=201)
 
 
+@swagger_auto_schema(
+    tags=['Authentication'],
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'email': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_EMAIL),
+            'password': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_PASSWORD),
+        },
+        required=['email', 'password'],
+    ),
+    responses={
+        200: 'Successful login response',
+    },
+)
 @api_view(['POST'])
 def login(request):
-    email = request.data.get('email')
-    password = request.data.get('password')
-    if (User.objects.filter(email=email).exists()) == False:
-        return JsonResponse({'status': 404, 'message': 'Korisnik sa unesenim emailom nije registrovan'}, status=404)
-    elif check_password(password, User.objects.get(email=email).password) == False:
-        return JsonResponse({'status': 400, 'message': 'Pogrešni kredencijali'}, status=400)
+    data = request.data
+    response = Response()
+    email = data.get('email', None)
+    password = data.get('password', None)
+
+    if (User.objects.filter(email=email).exists() == True):
+        user = User.objects.get(email=email)
+        is_password_valid = check_password(password, user.password)
+        if is_password_valid:
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh)
+            user.access_token = access_token
+
+            response.set_cookie(
+                "Authentication", access_token, 86400, httponly=True)
+
+            response.data = {"user": {"id": user.id,
+                                      "email": user.email, "username": user.username,
+                                      "tel_number": user.tel_number, "age": user.age, "city": user.city, "interests": user.interests,
+                                      "name": user.name, "surname": user.surname, "picture": user.picture}}
+            response.message = "Login successfully"
+
+            return response
+        else:
+            return Response({"message": "Invalid username or password!!",
+                             "data": {},
+                             }, status=status.HTTP_400_BAD_REQUEST)
+
+    elif (Owner.objects.filter(email=email).exists() == True):
+        owner = Owner.objects.get(email=email)
+        is_password_valid = check_password(password, owner.password)
+
+        if is_password_valid:
+            refresh = RefreshToken.for_user(owner)
+            access_token = str(refresh)
+            owner.access_token = access_token
+
+            response.set_cookie(
+                "Authentication", access_token, 86400, httponly=True)
+
+            response.data = {"owner": {"id": owner.id,
+                                       "email": owner.email, "username": owner.username,
+                                       "tel_number": owner.tel_number, "location": owner.location,
+                                       "capacity": owner.capacity, "name": owner.name, "surname": owner.surname, "picture": owner.picture}}
+            response.message = "Login successfully"
+
+            return response
     else:
-        user = list(User.objects.filter(email=email).values(
-            'name', 'surname', 'email', 'phone', 'username', 'typeOfUser'))
-        return JsonResponse(user, safe=False)
+        return Response({"message": "Invalid username or password!!",
+                         "data": {},
+                         }, status=status.HTTP_400_BAD_REQUEST)
 
 
+@swagger_auto_schema(
+    tags=['Authentication'],
+    method='post',
+    responses={
+        200: 'Successful logout response',
+    },
+)
+@api_view(['POST'])
+def logout(request):
+    response = Response()
+
+    if request.user.is_authenticated:
+        request.user.access_token = None
+        request.user.save()
+
+    response.delete_cookie("Authentication")
+
+    return Response({"message": "Logged out successfully.",
+                     "data": {},
+                     }, status=status.HTTP_200_OK)
+
+
+@swagger_auto_schema(
+    method='put',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'email': openapi.Schema(type=openapi.TYPE_STRING),
+        },
+        required=['email']
+    ),
+    responses={
+        200: openapi.Response('OK'),
+        404: openapi.Response('Not Found'),
+    }
+)
+@api_view(['PUT'])
+def forgot_password(request):
+    email = request.data.get('email')
+    if (User.objects.filter(email=email).exists() == False & Owner.objects.filter(email=email).exists() == False):
+        return JsonResponse({'status': False, 'message': 'Korisnik sa unesenim emailom nije registrovan'}, status=status.HTTP_404_NOT_FOUND)
+    else:
+        if (User.objects.filter(email=email).exists() == True):
+            password = get_random_string(8)
+            user = User.objects.get(email=email)
+            user.password = make_password(password)
+            user.save()
+            send_mail(
+                'PROMJENA LOZINKE',
+                'Vaša nova lozinka je ' + password,
+                'redroseb1206@gmail.com',
+                [email],
+                fail_silently=False)
+            return JsonResponse({'status': True, 'message': 'Nova lozinka Vam je poslana na '+email}, status=status.HTTP_200_OK)
+        elif (Owner.objects.filter(email=email).exists() == True):
+            password = get_random_string(8)
+            owner = Owner.objects.get(email=email)
+            owner.password = make_password(password)
+            owner.save()
+            send_mail(
+                'PROMJENA LOZINKE',
+                'Vaša nova lozinka je ' + password,
+                'redroseb1206@gmail.com',
+                [email],
+                fail_silently=False)
+            return JsonResponse({'status': True, 'message': 'Nova lozinka Vam je poslana na '+email}, status=status.HTTP_200_OK)
+
+
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: "OK",
+    }
+)
+@api_view(['GET'])
+def get_all_players(request):
+    users = list(User.objects.values(
+        'id', 'name', 'surname', 'username', 'city', 'age', 'interests', 'picture'))
+    return JsonResponse(users, safe=False, status=status.HTTP_200_OK)
+
+
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: "OK",
+    }
+)
+@api_view(['GET'])
+def get_all_owners(request):
+    owners = list(Owner.objects.values(
+        'id', 'name', 'surname', 'location', 'username', 'capacity', 'picture', 'tel_number'))
+    return JsonResponse(owners, safe=False, status=status.HTTP_200_OK)
+
+
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: "OK",
+    }
+)
+@api_view(['GET'])
+def get_all_sport_halls(request):
+    sport_halls = list(SportHall.objects.values(
+        'title', 'city', 'address', 'description', 'status', 'price', 'pictures', 'owner_id'))
+    return JsonResponse(sport_halls, safe=False, status=status.HTTP_200_OK)
+
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: "OK",
+        404: "User not found"
+    }
+)
 @api_view(['GET'])
 def get_user_data(request, id):
     try:
         user = list(User.objects.filter(id=id).values())
-        return JsonResponse(user, safe=False)
+        return JsonResponse(user, safe=False, status = status.HTTP_200_OK)
     except User.DoesNotExist:
-        return JsonResponse({"error":"User not found"})
+        return JsonResponse({"error":"User not found"}, status=status.HTTP_404_NOT_FOUND)
 
-@api_view(['POST'])
+@swagger_auto_schema(
+    method='put',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'name': openapi.Schema(type=openapi.TYPE_STRING, description='The name field'),
+            'surname': openapi.Schema(type=openapi.TYPE_STRING, description='The surname field'),
+            'username': openapi.Schema(type=openapi.TYPE_STRING, description='The username field'),
+            'tel_number': openapi.Schema(type=openapi.TYPE_STRING, description='The telephone number field'),
+            'city': openapi.Schema(type=openapi.TYPE_STRING, description='The city field'),
+            'age': openapi.Schema(type=openapi.TYPE_INTEGER, description='The age field'),
+        },
+        required=['name', 'surname', 'username', 'tel_number', 'city', 'age']
+
+    ),
+    responses={
+        200: "OK",
+        404: "User not found"
+    }
+)
+@api_view(['PUT'])
 def update_user(request, id):
     try:
         user = User.objects.get(id=id)
@@ -100,6 +344,168 @@ def update_user(request, id):
         user.city = request.data.get('city')
         user.age = request.data.get('age')
         user.save()
-        return JsonResponse({'success': True})
+        return JsonResponse({'success': True}, status=status.HTTP_200_OK)
     except:
-        return JsonResponse({'success': False, 'message': 'User not found.'})
+        return JsonResponse({'success': False, 'message': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+@swagger_auto_schema(
+    method='put',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'new_password': openapi.Schema(type=openapi.TYPE_STRING, description='The new password field'),
+            'new_repeated_password': openapi.Schema(type=openapi.TYPE_STRING, description='The new repeated password field'),
+            'old_password': openapi.Schema(type=openapi.TYPE_STRING, description='The old password field'),
+        },
+        required=['new_password', 'new_repeated_password', 'old_password']
+    ),
+    responses={
+        200: "OK",
+        404: "User not found",
+        400: "Bad request",
+    }
+)
+@api_view(['PUT'])
+def update_user_password(request, id):
+    try:
+        user = User.objects.get(id=id)
+        old_password = request.data.get('password3')
+        new_password = request.data.get('password1')
+        new_repeated_password = request.data.get('password2')
+        is_password_valid = check_password(old_password, user.password)
+        if is_password_valid:
+            if new_password == new_repeated_password:
+                user.password = make_password(new_password)
+                user.save()
+                return Response({'success': True}, status=status.HTTP_200_OK)
+            else:
+                return Response({'message': "Sifre se ne poklapaju"}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'message': "Netacna sifra"}, status=status.HTTP_400_BAD_REQUEST)
+    except:
+        return Response({'success': False, 'message': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@swagger_auto_schema(
+    method='put',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'photo': openapi.Schema(type=openapi.TYPE_FILE, description='Photo field'),
+        },
+        required=['photo']
+    ),
+    responses={
+        200: "OK",
+        404: "User not found",
+    }
+)
+@api_view(['PUT'])
+def update_user_photo(request, id):
+    uploaded_file = request.FILES.get('photo')
+    user = User.objects.get(id=id)
+    if uploaded_file:
+        bucket = storage.bucket()
+        filename = uploaded_file.name
+        blob = bucket.blob(filename)
+        blob.content_type = 'image/jpeg'
+        blob.upload_from_file(uploaded_file)
+        url = blob.generate_signed_url(expiration=datetime.timedelta(days=7))
+        image_url = url
+        print(image_url)
+        user.picture = image_url
+        user.save()
+        return Response({'success': True}, status=status.HTTP_200_OK)
+    else:
+        return Response({'success': False, 'message': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: "OK",
+        404: "User not found"
+    }
+)
+@api_view(['GET'])
+def get_owner_data(request, id):
+    try:
+        owner = list(Owner.objects.filter(id=id).values())
+        return JsonResponse(owner, safe=False, status = status.HTTP_200_OK)
+    except User.DoesNotExist:
+        return JsonResponse({"error":"User not found"}, status=status.HTTP_404_NOT_FOUND)
+@swagger_auto_schema(
+    method='put',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'name': openapi.Schema(type=openapi.TYPE_STRING, description='The name field'),
+            'surname': openapi.Schema(type=openapi.TYPE_STRING, description='The surname field'),
+            'username': openapi.Schema(type=openapi.TYPE_STRING, description='The username field'),
+            'tel_number': openapi.Schema(type=openapi.TYPE_STRING, description='The telephone number field'),
+            'city': openapi.Schema(type=openapi.TYPE_STRING, description='The city field'),
+            'capacity': openapi.Schema(type=openapi.TYPE_INTEGER, description='The capacity field'),
+            'street': openapi.Schema(type=openapi.TYPE_STRING, description='The street field'),
+            'streetNumber': openapi.Schema(type=openapi.TYPE_STRING, description='The street number field'),
+            'type': openapi.Schema(type=openapi.TYPE_STRING, description='The type field'),
+        },
+        required=['name', 'surname', 'username', 'tel_number', 'city',
+                  'capacity', 'street', 'streetNumber', 'type']
+    )
+)
+@api_view(['PUT'])
+def update_owner(request, id):
+    try:
+        owner = Owner.objects.get(id=id)
+        owner.username = request.data.get('username')
+        owner.name = request.data.get('name')
+        owner.surname = request.data.get('surname')
+        owner.tel_number = request.data.get('tel_number')
+        city = request.data.get('city')
+        street = request.data.get('street')
+        street_number = request.data.get('streetNumber')
+        location = json.dumps(
+            {"city": city, "street": street, "streetNumber": street_number})
+        owner.location = location
+        owner.capacity = request.data.get('capacity')
+        owner.type = request.data.get('type')
+        owner.save()
+        return JsonResponse({'success': True}, status=status.HTTP_200_OK)
+    except:
+        return JsonResponse({'success': False, 'message': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+@swagger_auto_schema(
+    method='put',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'new_password': openapi.Schema(type=openapi.TYPE_STRING, description='The new password field'),
+            'new_repeated_password': openapi.Schema(type=openapi.TYPE_STRING, description='The new repeated password field'),
+            'old_password': openapi.Schema(type=openapi.TYPE_STRING, description='The old password field'),
+        },
+        required=['new_password', 'new_repeated_password', 'old_password']
+    ),
+    responses={
+        200: "OK",
+        404: "User not found",
+        400: "Bad request",
+    }
+)
+@api_view(['PUT'])
+def update_owner_password(request, id):
+    try:
+        owner = Owner.objects.get(id=id)
+        old_password = request.data.get('password3')
+        new_password = request.data.get('password1')
+        new_repeated_password = request.data.get('password2')
+        is_password_valid = check_password(old_password, owner.password)
+        if is_password_valid:
+            if new_password == new_repeated_password:
+                owner.password = make_password(new_password)
+                owner.save()
+                return Response({'success': True}, status=status.HTTP_200_OK)
+            else:
+                return Response({'message': "Sifre se ne poklapaju"}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'message': "Netacna sifra"}, status=status.HTTP_400_BAD_REQUEST)
+    except:
+        return Response({'success': False, 'message': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
