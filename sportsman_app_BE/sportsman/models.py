@@ -102,6 +102,8 @@ class SportHall(models.Model):
     owner_id = models.ForeignKey(Owner, on_delete=models.CASCADE)
     status = models.CharField(max_length=20, null=True)
     price = models.FloatField()
+    sports = models.TextField(null=True)
+    type = models.CharField(max_length=20, null=True)
     pictures = models.TextField(null=True)
     capacity = models.IntegerField(null=True)
 
