@@ -6,7 +6,7 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import api_view
 from django.contrib.auth.hashers import make_password, check_password
 
-import settings
+from django.conf import settings
 from .helpers import send_confirmation_email
 from .models import *
 from django.utils.crypto import get_random_string
@@ -549,4 +549,3 @@ def confirm_email(request):
         return Response({'message': 'Token has expired'})
     except (jwt.DecodeError, User.DoesNotExist):
         return Response({'message': 'Invalid token'})
-        
