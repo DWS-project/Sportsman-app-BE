@@ -98,7 +98,7 @@ class SportHall(models.Model):
     title = models.CharField(max_length=50)
     city = models.CharField(max_length=50)
     address = models.TextField(null=True)
-    description = models.CharField(max_length=500, null=True)
+    description = models.CharField(max_length=5000, null=True)
     owner_id = models.ForeignKey(Owner, on_delete=models.CASCADE)
     status = models.CharField(max_length=20, null=True)
     price = models.FloatField()
