@@ -17,4 +17,6 @@ urlpatterns = [
     path('add-sport-hall', views.add_new_sport_hall, name='addNewSportHall'),
     path('get-sport-hall', views.get_sport_hall, name='getSportHall'),
     path('remove-sport-hall', views.remove_sport_hall, name='removeSportHall'),
+    path('change-sport-hall-status',
+         views.change_sporthall_status, name='changeSportHallStatus'),
 ]
