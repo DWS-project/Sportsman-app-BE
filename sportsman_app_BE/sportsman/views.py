@@ -374,11 +374,12 @@ def add_new_sport_hall(request):
     price = data.get('price')
     capacity = data.get('capacity')
     owner_id = data.get('owner_id')
+    pictures = data.get('pictures')
 
     if owner_id is not None:
         SportHall.objects.create(title=title, city=city, address=address,
                                  description=description, status=sport_hall_status, price=price, capacity=capacity,
-                                 owner_id_id=owner_id)
+                                 owner_id_id=owner_id, pictures=pictures)
         return Response({'data': {title, city, address, description, price}, 'message': 'Uspješno kreiran novi teren.'},
                         status=status.HTTP_200_OK)
     else:
