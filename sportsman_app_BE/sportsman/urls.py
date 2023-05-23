@@ -8,6 +8,7 @@ urlpatterns = [
          views.registration_player, name='registrationPlayer'),
     path('authentication/register-owner',
          views.registration_owner, name='registrationOwner'),
+    path('landing-page-cards/', views.landing_page, name='landingPage'),
     path('authentication/forgot-password',
          views.forgot_password, name='forgotPassword'),
     re_path(r'^authentication/confirm-email/$',
