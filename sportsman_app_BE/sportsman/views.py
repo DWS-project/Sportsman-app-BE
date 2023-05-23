@@ -1,6 +1,5 @@
 import json
 
-from django.db.models import Q
 from django.forms import model_to_dict
 from django.http import JsonResponse
 from drf_yasg import openapi
@@ -158,7 +157,7 @@ def login(request):
             response.data = {"user": {"id": user.id,
                                       "email": user.email, "username": user.username,
                                       "tel_number": user.tel_number, "age": user.age, "city": user.city, "interests": user.interests,
-                                      "name": user.name, "surname": user.surname, "picture": user.picture}}
+                                      "name": user.name, "surname": user.surname, "picture": user.picture if user.picture else None}}
             response.message = "Login successfully"
 
             return response
@@ -182,7 +181,7 @@ def login(request):
             response.data = {"owner": {"id": owner.id,
                                        "email": owner.email, "username": owner.username,
                                        "tel_number": owner.tel_number, "location": owner.location,
-                                       "capacity": owner.capacity, "name": owner.name, "surname": owner.surname, "picture": owner.picture}}
+                                       "capacity": owner.capacity, "name": owner.name, "surname": owner.surname, "picture": owner.picture if owner.picture else None}}
             response.message = "Login successfully"
 
             return response
@@ -213,23 +212,19 @@ def logout(request):
                      }, status=status.HTTP_200_OK)
 
 @swagger_auto_schema(
-    tags=['Landing-page'],
+    tags=['Landing page'],
     method='get',
-    request_body=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        properties={
-            'price': openapi.Schema(type=openapi.TYPE_STRING, description='The price field'),
-            'city': openapi.Schema(type=openapi.TYPE_STRING, description='The city field'),
-            'date': openapi.Schema(type=openapi.TYPE_STRING, description='The date field'),
-            'time': openapi.Schema(type=openapi.TYPE_STRING, description='The time field'),
-            'text': openapi.Schema(type=openapi.TYPE_STRING, description='The searchbar text field'),
-            'sort_type': openapi.Schema(type=openapi.TYPE_STRING, description='The type sorting field'),
-            'sort_price': openapi.Schema(type=openapi.TYPE_STRING, description='The price sorting field'),
-            'sports': openapi.Schema(type=openapi.TYPE_STRING, description='The sports field'),
-            'type': openapi.Schema(type=openapi.TYPE_INTEGER, description='The type field'),
-        },
-        required=['price', 'city', 'date', 'time', 'text', 'sort_type', 'sort_price', 'sports', 'type']
-    )
+    manual_parameters=[
+        openapi.Parameter('price', openapi.IN_QUERY, description='The price field', type=openapi.TYPE_STRING),
+        openapi.Parameter('city', openapi.IN_QUERY, description='The city field', type=openapi.TYPE_STRING),
+        openapi.Parameter('date', openapi.IN_QUERY, description='The date field', type=openapi.TYPE_STRING),
+        openapi.Parameter('time', openapi.IN_QUERY, description='The time field', type=openapi.TYPE_STRING),
+        openapi.Parameter('text', openapi.IN_QUERY, description='The searchbar text field', type=openapi.TYPE_STRING),
+        openapi.Parameter('sort_type', openapi.IN_QUERY, description='The type sorting field', type=openapi.TYPE_STRING),
+        openapi.Parameter('sort_price', openapi.IN_QUERY, description='The price sorting field', type=openapi.TYPE_STRING),
+        openapi.Parameter('sports', openapi.IN_QUERY, description='The sports field', type=openapi.TYPE_STRING),
+        openapi.Parameter('type', openapi.IN_QUERY, description='The type field', type=openapi.TYPE_INTEGER),
+    ]
 )
 @api_view(['GET'])
 def landing_page(request):
