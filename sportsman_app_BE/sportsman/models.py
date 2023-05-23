@@ -19,8 +19,11 @@ class User(models.Model):
     tel_number = models.CharField(max_length=20, null=True)
     age = models.IntegerField(null=True)
     interests = models.TextField(null=True)
-    picture = models.ImageField(null=True)
+    picture = models.TextField(null=True)
     access_token = models.TextField(null=True)
+    confirmation_token = models.TextField(null=True)
+    last_login = models.DateTimeField(null=True)
+    email_confirmed = models.BooleanField(default=False)
 
     def __str__(self):
         return self.email
@@ -81,8 +84,11 @@ class Owner(models.Model):
     tel_number = models.CharField(max_length=20, null=True)
     capacity = models.IntegerField(null=True)
     type = models.CharField(max_length=10, null=True)
-    picture = models.ImageField(null=True)
+    picture = models.TextField(null=True)
     access_token = models.TextField(null=True)
+    confirmation_token = models.TextField(null=True)
+    last_login = models.DateTimeField(null=True)
+    email_confirmed = models.BooleanField(default=False)
 
     def __str__(self):
         return self.email
@@ -92,11 +98,11 @@ class SportHall(models.Model):
     title = models.CharField(max_length=50)
     city = models.CharField(max_length=50)
     address = models.TextField(null=True)
-    sports = models.TextField(null=True)
-    description = models.CharField(max_length=500, null=True)
+    description = models.CharField(max_length=5000, null=True)
     owner_id = models.ForeignKey(Owner, on_delete=models.CASCADE)
     status = models.CharField(max_length=20, null=True)
     price = models.FloatField()
+    sports = models.TextField(null=True)
     type = models.CharField(max_length=20, null=True)
     pictures = models.TextField(null=True)
     capacity = models.IntegerField(null=True)

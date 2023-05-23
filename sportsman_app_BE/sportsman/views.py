@@ -1,4 +1,5 @@
 import json
+import jwt
 
 from django.forms import model_to_dict
 from django.http import JsonResponse
@@ -6,6 +7,9 @@ from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import api_view
 from django.contrib.auth.hashers import make_password, check_password
+
+from django.conf import settings
+from .helpers import send_confirmation_email
 from .models import *
 from django.utils.crypto import get_random_string
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -29,12 +33,12 @@ from django.core import serializers
             'email': openapi.Schema(type=openapi.TYPE_STRING, description='The email field'),
             'tel_number': openapi.Schema(type=openapi.TYPE_STRING, description='The telephone number field'),
             'password': openapi.Schema(type=openapi.TYPE_STRING, description='The password field'),
-            'repeated_password': openapi.Schema(type=openapi.TYPE_STRING, description='The repeated password field'),
+            'repeatedPassword': openapi.Schema(type=openapi.TYPE_STRING, description='The repeated password field'),
             'city': openapi.Schema(type=openapi.TYPE_STRING, description='The city field'),
             'age': openapi.Schema(type=openapi.TYPE_INTEGER, description='The age field'),
             'sports': openapi.Schema(type=openapi.TYPE_STRING, description='The interests field'),
         },
-        required=['name', 'surname', 'username', 'email', 'tel_number', 'password', 'repeated_password', 'city', 'age',
+        required=['name', 'surname', 'username', 'email', 'tel_number', 'password', 'repeatedPassword', 'city', 'age',
                   'sports']
 
     )
@@ -58,14 +62,29 @@ def registration_player(request):
         interests = json.dumps({"interests": sports})
     user = User.objects.filter(email=email)
     if password != repeated_password:
-        return JsonResponse({'status': False, 'message': "Lozinke se ne podudaraju"}, status=status.HTTP_400_BAD_REQUEST)
+        return JsonResponse({'status': False, 'message': "Lozinke se ne podudaraju"},
+                            status=status.HTTP_400_BAD_REQUEST)
     elif len(user) > 0:
-        return JsonResponse({'status': False, 'message': "Email je već registrovan."}, status=status.HTTP_400_BAD_REQUEST)
+        return JsonResponse({'status': False, 'message': "Email je već registrovan."},
+                            status=status.HTTP_400_BAD_REQUEST)
     else:
-        User.objects.create(name=name, surname=surname, username=username, email=email,
-                            tel_number=tel_number, city=city, age=age, interests=interests,
-                            password=make_password(password))
-        return JsonResponse({'status': True, 'message': "Uspješno ste se registrovali."}, status=status.HTTP_201_CREATED)
+        token = send_confirmation_email(email)
+
+        User.objects.create(**{
+            'name': name,
+            'surname': surname, 'username': username,
+            'email': email,
+            "tel_number": tel_number,
+            'city': city,
+            'age': age,
+            'interests': interests,
+            'password': make_password(password),
+            'confirmation_token': token,
+            'email_confirmed': False
+        })
+
+    return JsonResponse({'status': True, 'message': "Uspješno ste se registrovali."},
+                        status=status.HTTP_201_CREATED)
 
 
 @swagger_auto_schema(
@@ -80,14 +99,14 @@ def registration_player(request):
             'email': openapi.Schema(type=openapi.TYPE_STRING, description='The email field'),
             'tel_number': openapi.Schema(type=openapi.TYPE_STRING, description='The telephone number field'),
             'password': openapi.Schema(type=openapi.TYPE_STRING, description='The password field'),
-            'repeated_password': openapi.Schema(type=openapi.TYPE_STRING, description='The repeated password field'),
+            'repeatedPassword': openapi.Schema(type=openapi.TYPE_STRING, description='The repeated password field'),
             'city': openapi.Schema(type=openapi.TYPE_STRING, description='The city field'),
             'capacity': openapi.Schema(type=openapi.TYPE_INTEGER, description='The capacity field'),
             'street': openapi.Schema(type=openapi.TYPE_STRING, description='The street field'),
             'streetNumber': openapi.Schema(type=openapi.TYPE_STRING, description='The street number field'),
             'type': openapi.Schema(type=openapi.TYPE_STRING, description='The type field'),
         },
-        required=['name', 'surname', 'username', 'email', 'tel_number', 'password', 'repeated_password', 'city',
+        required=['name', 'surname', 'username', 'email', 'tel_number', 'password', 'repeatedPassword', 'city',
                   'capacity', 'street', 'streetNumber', 'type']
     )
 )
@@ -111,14 +130,29 @@ def registration_owner(request):
     owner = Owner.objects.filter(email=email)
 
     if password != repeated_password:
-        return JsonResponse({'status': False, 'message': "Lozinke se ne podudaraju"}, status=status.HTTP_400_BAD_REQUEST)
+        return JsonResponse({'status': False, 'message': "Lozinke se ne podudaraju"},
+                            status=status.HTTP_400_BAD_REQUEST)
     elif len(owner) > 0:
-        return JsonResponse({'status': False, 'message': "Email je već registrovan."}, status=status.HTTP_400_BAD_REQUEST)
+        return JsonResponse({'status': False, 'message': "Email je već registrovan."},
+                            status=status.HTTP_400_BAD_REQUEST)
     else:
-        Owner.objects.create(name=name, surname=surname, username=username, email=email,
-                             tel_number=tel_number, location=location, capacity=capacity, type=type_of_user,
-                             password=make_password(password))
-        return JsonResponse({'status': True, 'message': "Uspješno ste se registrovali."}, status=status.HTTP_401_UNAUTHORIZED)
+        token = send_confirmation_email(email)
+
+        Owner.objects.create(**{
+            'name': name,
+            'surname': surname, 'username': username,
+            'email': email,
+            "tel_number": tel_number,
+            'location': location,
+            'capacity': capacity,
+            'type': type_of_user,
+            'password': make_password(password),
+            'confirmation_token': token,
+            'email_confirmed': False
+        })
+
+        return JsonResponse({'status': True, 'message': "Uspješno ste se registrovali."},
+                            status=status.HTTP_201_CREATED)
 
 
 @swagger_auto_schema(
@@ -156,8 +190,9 @@ def login(request):
 
             response.data = {"user": {"id": user.id,
                                       "email": user.email, "username": user.username,
-                                      "tel_number": user.tel_number, "age": user.age, "city": user.city, "interests": user.interests,
-                                      "name": user.name, "surname": user.surname, "picture": user.picture if user.picture else None}}
+                                      "tel_number": user.tel_number, "age": user.age, "city": user.city,
+                                      "interests": user.interests,
+                                      "name": user.name, "surname": user.surname, "picture": user.picture}}
             response.message = "Login successfully"
 
             return response
@@ -181,7 +216,8 @@ def login(request):
             response.data = {"owner": {"id": owner.id,
                                        "email": owner.email, "username": owner.username,
                                        "tel_number": owner.tel_number, "location": owner.location,
-                                       "capacity": owner.capacity, "name": owner.name, "surname": owner.surname, "picture": owner.picture if owner.picture else None}}
+                                       "capacity": owner.capacity, "name": owner.name, "surname": owner.surname,
+                                       "picture": owner.picture}}
             response.message = "Login successfully"
 
             return response
@@ -276,6 +312,78 @@ def landing_page(request):
 
 
 @swagger_auto_schema(
+    tags=['Landing page'],
+    method='get',
+    manual_parameters=[
+        openapi.Parameter('price', openapi.IN_QUERY,
+                          description='The price field', type=openapi.TYPE_STRING),
+        openapi.Parameter('city', openapi.IN_QUERY,
+                          description='The city field', type=openapi.TYPE_STRING),
+        openapi.Parameter('date', openapi.IN_QUERY,
+                          description='The date field', type=openapi.TYPE_STRING),
+        openapi.Parameter('time', openapi.IN_QUERY,
+                          description='The time field', type=openapi.TYPE_STRING),
+        openapi.Parameter('text', openapi.IN_QUERY,
+                          description='The searchbar text field', type=openapi.TYPE_STRING),
+        openapi.Parameter('sort_type', openapi.IN_QUERY,
+                          description='The type sorting field', type=openapi.TYPE_STRING),
+        openapi.Parameter('sort_price', openapi.IN_QUERY,
+                          description='The price sorting field', type=openapi.TYPE_STRING),
+        openapi.Parameter('sports', openapi.IN_QUERY,
+                          description='The sports field', type=openapi.TYPE_STRING),
+        openapi.Parameter('type', openapi.IN_QUERY,
+                          description='The type field', type=openapi.TYPE_INTEGER),
+    ]
+)
+@api_view(['GET'])
+def landing_page(request):
+    price = request.GET.get('price')
+    city = request.GET.get('city')
+    sports = request.GET.getlist('sports[]')
+    type = request.GET.getlist('type[]')
+    date = request.GET.get('date')
+    time = request.GET.get('time')
+    search_text = request.GET.get('searchText')
+    sort_type = request.GET.get('sort_type')
+    sort_price = request.GET.get('sort_price')
+
+    queryset = SportHall.objects.all()
+
+    if city:
+        queryset = queryset.filter(city=city)
+
+    if type:
+        queryset = queryset.filter(type__in=type)
+
+    if price:
+        queryset = queryset.filter(price__lte=price)
+
+    if search_text:
+        queryset = queryset.filter(title__icontains=search_text)
+
+    if sort_type:
+        if sort_type == 'Unutrašnji':
+            queryset = queryset.order_by('type')
+        elif sort_type == 'Vanjski':
+            queryset = queryset.order_by('-type')
+
+    if sort_price:
+        if sort_price == 'Najjeftiniji':
+            queryset = queryset.order_by('price')
+        elif sort_price == 'Najskuplji':
+            queryset = queryset.order_by('-price')
+
+    filtered_items = []
+    for item in queryset:
+        sports_string = item.sports
+        sports_list = json.loads(sports_string)
+        if any(sport in sports_list['sports'] for sport in sports):
+            filtered_items.append(model_to_dict(item))
+
+    return JsonResponse({'data': filtered_items})
+
+
+@swagger_auto_schema(
     tags=['Authentication'],
     method='put',
     request_body=openapi.Schema(
@@ -293,10 +401,11 @@ def landing_page(request):
 @api_view(['PUT'])
 def forgot_password(request):
     email = request.data.get('email')
-    if (User.objects.filter(email=email).exists() == False & Owner.objects.filter(email=email).exists() == False):
-        return JsonResponse({'status': False, 'message': 'Korisnik sa unesenim emailom nije registrovan'}, status=status.HTTP_404_NOT_FOUND)
+    if User.objects.filter(email=email).exists() == False & Owner.objects.filter(email=email).exists() == False:
+        return JsonResponse({'status': False, 'message': 'Korisnik sa unesenim emailom nije registrovan'},
+                            status=status.HTTP_404_NOT_FOUND)
     else:
-        if (User.objects.filter(email=email).exists() == True):
+        if User.objects.filter(email=email).exists() == True:
             password = get_random_string(8)
             user = User.objects.get(email=email)
             user.password = make_password(password)
@@ -307,7 +416,8 @@ def forgot_password(request):
                 'redroseb1206@gmail.com',
                 [email],
                 fail_silently=False)
-            return JsonResponse({'status': True, 'message': 'Nova lozinka Vam je poslana na '+email}, status=status.HTTP_200_OK)
+            return JsonResponse({'status': True, 'message': 'Nova lozinka Vam je poslana na ' + email},
+                                status=status.HTTP_200_OK)
         elif (Owner.objects.filter(email=email).exists() == True):
             password = get_random_string(8)
             owner = Owner.objects.get(email=email)
@@ -319,7 +429,8 @@ def forgot_password(request):
                 'redroseb1206@gmail.com',
                 [email],
                 fail_silently=False)
-            return JsonResponse({'status': True, 'message': 'Nova lozinka Vam je poslana na '+email}, status=status.HTTP_200_OK)
+            return JsonResponse({'status': True, 'message': 'Nova lozinka Vam je poslana na ' + email},
+                                status=status.HTTP_200_OK)
 
 
 @swagger_auto_schema(
@@ -399,11 +510,14 @@ def add_new_sport_hall(request):
     price = data.get('price')
     capacity = data.get('capacity')
     owner_id = data.get('owner_id')
+    pictures = data.get('pictures')
 
     if owner_id is not None:
         SportHall.objects.create(title=title, city=city, address=address,
-                                 description=description, status=sport_hall_status, price=price, capacity=capacity, owner_id_id=owner_id)
-        return Response({'data': {title, city, address, description,  price}, 'message': 'Uspješno kreiran novi teren.'}, status=status.HTTP_200_OK)
+                                 description=description, status=sport_hall_status, price=price, capacity=capacity,
+                                 owner_id_id=owner_id, pictures=pictures)
+        return Response({'data': {title, city, address, description, price}, 'message': 'Uspješno kreiran novi teren.'},
+                        status=status.HTTP_200_OK)
     else:
         return JsonResponse({'data': {}, 'message': 'Došlo je do greške.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -427,7 +541,8 @@ def add_new_sport_hall(request):
         200: openapi.Response(description='Success', schema=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'status': openapi.Schema(type=openapi.TYPE_BOOLEAN, description='Indicates if the request was successful'),
+                'status': openapi.Schema(type=openapi.TYPE_BOOLEAN,
+                                         description='Indicates if the request was successful'),
                 'message': openapi.Schema(type=openapi.TYPE_STRING, description='A message indicating the result')
             }
         )),
@@ -442,9 +557,7 @@ def get_sport_hall(request):
     sporthall_id = data.get('sporthall_id')
     owner = Owner.objects.get(id=owner_id)
     sporthall = SportHall.objects.get(id=sporthall_id)
-    array_of_sporthalls = []
-    array_of_sporthalls.append(owner)
-    array_of_sporthalls.append(sporthall)
+    array_of_sporthalls = [owner, sporthall]
     try:
         sporthalls_of_owner = Owner_SportHall.objects.filter(
             owner_id_id=owner_id)
@@ -537,3 +650,39 @@ def change_sporthall_status(request):
         return JsonResponse({'data': json.loads(obj)}, status=200)
     except:
         return JsonResponse({'data': {}}, status=400)
+
+
+@swagger_auto_schema(
+    tags=['Authentication'],
+    method='post',
+    manual_parameters=[
+        openapi.Parameter('token', openapi.IN_QUERY, description='Token',
+                          type=openapi.TYPE_STRING),
+    ],
+    responses={
+        200: openapi.Response(description='Success', schema=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'token': openapi.Schema(type=openapi.TYPE_STRING, description='Token'),
+            }
+        )),
+        404: "Not Found",
+        500: "Internal Server Error"
+    }
+)
+@api_view(['POST'])
+def confirm_email(request):
+    try:
+        token = request.GET.get('token')
+        decoded_token = jwt.decode(token, settings.SECRET_KEY)
+        user = User.objects.get(email=decoded_token['email'])
+        user.email_confirmed = True
+        user.confirmation_token = None
+
+        user.save()
+        return Response({'message': 'Email confirmed successfully'})
+
+    except jwt.ExpiredSignatureError:
+        return Response({'message': 'Token has expired'})
+    except (jwt.DecodeError, User.DoesNotExist):
+        return Response({'message': 'Invalid token'})
