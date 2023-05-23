@@ -1,25 +1,30 @@
+from datetime import datetime, timedelta
+from django.core.mail import EmailMessage
 from os import environ
-from django.core.mail import send_mail
-from sportsman.utils import email_verification_token
+import jwt
+import settings
 
 
-def send_confirmation_email(user):
-    user.confirmation_token = email_verification_token.make_token(user)
-    user.save()
-
-    confirmation_url = "http://localhost:8000/authentication/confirm-email?token=" + email_verification_token.make_token(
-        user)
-
-    link = '<a href="{{ confirmation_url }}">Klikni me</a>'
+def send_confirmation_email(email):
+    expiration_time = datetime.utcnow() + timedelta(hours=3)
+    token = jwt.encode({'email': email, 'exp': expiration_time}, settings.SECRET_KEY)
+    confirmation_url = environ.get('CONFIRMATION_EMAIL_PAGE').format(token=token)
+    link = '<a href="{confirmation_url}">ovdje</a>'.format(confirmation_url=confirmation_url)
 
     email_subject = 'Potvrda email adrese'
-    email_body = 'Hvala sto ste se registrovali. Da biste nastavili koristiti aplikaciju molimo da potvrdite svoju ' \
-                 'email adresu ovdje ' + link
+    email_body = '<p>Hvala sto ste se registrovali. Da biste nastavili koristiti aplikaciju molimo da potvrdite svoju ' \
+                 'email adresu {link}</p>'.format(link=link)
 
-    send_mail(
+    email = EmailMessage(
         email_subject,
         email_body,
         environ.get('DEFAULT_FROM_EMAIL'),
-        [user.email],
-        fail_silently=False
+        [email],
+        headers={'From': 'Sportsman <{sportsmanMail}'.format(sportsmanMail=environ.get('DEFAULT_FROM_EMAIL'))}
     )
+
+    email.content_subtype = "html"
+
+    email.send()
+
+    return token

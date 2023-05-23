@@ -1,10 +1,12 @@
 import json
+import jwt
 from django.http import JsonResponse
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import api_view
 from django.contrib.auth.hashers import make_password, check_password
 
+import settings
 from .helpers import send_confirmation_email
 from .models import *
 from django.utils.crypto import get_random_string
@@ -64,7 +66,9 @@ def registration_player(request):
         return JsonResponse({'status': False, 'message': "Email je već registrovan."},
                             status=status.HTTP_400_BAD_REQUEST)
     else:
-        user = User.objects.create(**{
+        token = send_confirmation_email(email)
+
+        User.objects.create(**{
             'name': name,
             'surname': surname, 'username': username,
             'email': email,
@@ -72,12 +76,13 @@ def registration_player(request):
             'city': city,
             'age': age,
             'interests': interests,
-            'password': make_password(password)
+            'password': make_password(password),
+            'confirmation_token': token,
+            'email_confirmed': False
         })
 
-        send_confirmation_email(user)
-        return JsonResponse({'status': True, 'message': "Uspješno ste se registrovali."},
-                            status=status.HTTP_201_CREATED)
+    return JsonResponse({'status': True, 'message': "Uspješno ste se registrovali."},
+                        status=status.HTTP_201_CREATED)
 
 
 @swagger_auto_schema(
@@ -129,7 +134,9 @@ def registration_owner(request):
         return JsonResponse({'status': False, 'message': "Email je već registrovan."},
                             status=status.HTTP_400_BAD_REQUEST)
     else:
-        owner = Owner.objects.create(**{
+        token = send_confirmation_email(email)
+
+        Owner.objects.create(**{
             'name': name,
             'surname': surname, 'username': username,
             'email': email,
@@ -137,12 +144,13 @@ def registration_owner(request):
             'location': location,
             'capacity': capacity,
             'type': type_of_user,
-            'password': make_password(password)
+            'password': make_password(password),
+            'confirmation_token': token,
+            'email_confirmed': False
         })
 
-        send_confirmation_email(owner)
         return JsonResponse({'status': True, 'message': "Uspješno ste se registrovali."},
-                            status=status.HTTP_401_UNAUTHORIZED)
+                            status=status.HTTP_201_CREATED)
 
 
 @swagger_auto_schema(
@@ -474,41 +482,17 @@ def remove_sport_hall(request):
 )
 @api_view(['POST'])
 def confirm_email(request):
-    token = request.GET.get('token')
-    response = Response()
-
-    if User.objects.filter(confirmation_token=token).exists():
-        user = User.objects.get(confirmation_token=token)
-        user.confirmation_token = None
+    try:
+        token = request.GET.get('token')
+        decoded_token = jwt.decode(token, settings.SECRET_KEY)
+        user = User.objects.get(email=decoded_token['email'])
         user.email_confirmed = True
+        user.confirmation_token = None
+
         user.save()
-        response.data = {"user": {"id": user.id,
-                                  "email": user.email, "username": user.username,
-                                  "tel_number": user.tel_number, "age": user.age, "city": user.city,
-                                  "interests": user.interests,
-                                  "name": user.name, "surname": user.surname, "picture": user.picture}}
+        return Response({'message': 'Email confirmed successfully'})
 
-        return Response({"message": "Email potvrdjen",
-                         "data": {},
-                         }, status=status.HTTP_200_OK)
-
-    elif Owner.objects.filter(confirmation_token=token).exists():
-        owner = Owner.objects.get(confirmation_token=token)
-        owner.email_confirmed = True
-        owner.confirmation_token = False
-        owner.save()
-
-        response.data = {"owner": {"id": owner.id,
-                                   "email": owner.email, "username": owner.username,
-                                   "tel_number": owner.tel_number, "location": owner.location,
-                                   "capacity": owner.capacity, "name": owner.name, "surname": owner.surname,
-                                   "picture": owner.picture}}
-
-        return Response({"message": "Email potvrdjen",
-                         "data": {},
-                         }, status=status.HTTP_200_OK)
-
-    else:
-        return Response({"message": "Korisnik ne postoji",
-                         "data": {},
-                         }, status=status.HTTP_404_NOT_FOUND)
+    except jwt.ExpiredSignatureError:
+        return Response({'message': 'Token has expired'})
+    except (jwt.DecodeError, User.DoesNotExist):
+        return Response({'message': 'Invalid token'})
