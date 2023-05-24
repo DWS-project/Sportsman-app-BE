@@ -7,7 +7,10 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import api_view
 from django.core.exceptions import ObjectDoesNotExist
 import json
+from os import environ
 import jwt
+from django.conf import settings
+
 
 from django.forms import model_to_dict
 from django.http import JsonResponse
@@ -19,6 +22,8 @@ from django.contrib.auth.hashers import check_password
 import json
 
 from rest_framework.response import Response
+
+from django.core.mail import EmailMessage
 
 from django.contrib.auth.hashers import make_password, check_password
 
@@ -265,6 +270,7 @@ def logout(request):
     return Response({"message": "Logged out successfully.",
                      "data": {},
                      }, status=status.HTTP_200_OK)
+
 
 @swagger_auto_schema(
     tags=['Sport Hall'],
@@ -866,3 +872,76 @@ def confirm_email(request):
         return Response({'message': 'Invalid token'})
 
 
+@swagger_auto_schema(
+    method='post',
+    tags=['Contact'],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'name': openapi.Schema(type=openapi.TYPE_STRING, description='Name'),
+            'email': openapi.Schema(type=openapi.TYPE_STRING, description='Email'),
+            'message': openapi.Schema(type=openapi.TYPE_STRING, description='Message'),
+        },
+        required=['name', 'email', 'message'],
+        example={
+            'name': 'John Doe',
+            'email': 'johndoe@example.com',
+            'message': 'This is a test message'
+        }
+    ),
+    responses={
+        200: openapi.Response(
+            description='Success',
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING, description='A message indicating the result')
+                }
+            )
+        ),
+        400: 'Bad Request',
+        500: 'Internal Server Error'
+    }
+)
+@api_view(['POST'])
+def contact_us(request):
+    name = request.data.get('name')
+    email = request.data.get('email')
+    message = request.data.get('message')
+
+    user_email_subject = 'Kontakt stranica'
+    user_email_body = f'<p>Hvala Vam što ste nas kontaktirali {name}. Administrator će vas kontaktirati u skorije vrijeme na unesenu ' \
+        f'email adresu {email}</p>'
+
+    user_email = EmailMessage(
+        user_email_subject,
+        user_email_body,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        headers={'From': 'Sportsman <{sportsmanMail}>'.format(
+            sportsmanMail=settings.DEFAULT_FROM_EMAIL)}
+    )
+
+    user_email.content_subtype = "html"
+
+    user_email.send()
+
+    email_subject = 'Kontakt stranica'
+    email_body = f'<p>Osoba {name} Vas je kontaktirala.\n {message}\n ' \
+        f'sa email adresom {email}</p>'
+
+    email = EmailMessage(
+        email_subject,
+        email_body,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        headers={'From': email, 'To': 'Sportsman <{sportsmanMail}>'.format(
+            sportsmanMail=settings.DEFAULT_FROM_EMAIL)}
+    )
+
+    email.content_subtype = "html"
+
+    email.send()
+
+    return JsonResponse(
+        {'message': 'Poštovani, hvala vam što ste nas kontaktirali! Odgovorit ćemo vam u što skorijem roku.'}, status=status.HTTP_200_OK)
