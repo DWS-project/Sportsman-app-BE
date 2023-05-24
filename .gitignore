@@ -12,3 +12,4 @@ venv/
 __pycache__/
 # Ignore IDE-specific files
 .idea/
+.env
