@@ -14,8 +14,13 @@ from pathlib import Path
 import firebase_admin
 from firebase_admin import credentials
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 cred = credentials.Certificate("../cloud_key.json")
 app = firebase_admin.initialize_app(cred, {'storageBucket': 'sportsmanappcloud.appspot.com'})
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -62,6 +67,13 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
+}
+
+JWT_AUTH = {
+    'JWT_VERIFY_EXPIRATION': True,
+    'JWT_EXPIRATION_DELTA': timedelta(days=1),
+    'JWT_ALLOW_REFRESH': True,
+    'JWT_REFRESH_EXPIRATION_DELTA': timedelta(days=7),
 }
 
 MIDDLEWARE = [
