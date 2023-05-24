@@ -184,7 +184,9 @@ def login(request):
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh)
             user.access_token = access_token
-
+            user_picture = None
+            if user.picture:
+                user_picture = user.picture
             response.set_cookie(
                 "Authentication", access_token, 86400, httponly=True)
 
@@ -192,7 +194,7 @@ def login(request):
                                       "email": user.email, "username": user.username,
                                       "tel_number": user.tel_number, "age": user.age, "city": user.city,
                                       "interests": user.interests,
-                                      "name": user.name, "surname": user.surname, "picture": user.picture}}
+                                      "name": user.name, "surname": user.surname, "picture": user_picture}}
             response.message = "Login successfully"
 
             return response
@@ -209,7 +211,9 @@ def login(request):
             refresh = RefreshToken.for_user(owner)
             access_token = str(refresh)
             owner.access_token = access_token
-
+            owner_picture = None
+            if owner.picture:
+                user_picture = owner.picture
             response.set_cookie(
                 "Authentication", access_token, 86400, httponly=True)
 
@@ -217,7 +221,7 @@ def login(request):
                                        "email": owner.email, "username": owner.username,
                                        "tel_number": owner.tel_number, "location": owner.location,
                                        "capacity": owner.capacity, "name": owner.name, "surname": owner.surname,
-                                       "picture": owner.picture}}
+                                       "picture": owner_picture}}
             response.message = "Login successfully"
 
             return response
@@ -248,71 +252,7 @@ def logout(request):
                      }, status=status.HTTP_200_OK)
 
 @swagger_auto_schema(
-    tags=['Landing page'],
-    method='get',
-    manual_parameters=[
-        openapi.Parameter('price', openapi.IN_QUERY, description='The price field', type=openapi.TYPE_STRING),
-        openapi.Parameter('city', openapi.IN_QUERY, description='The city field', type=openapi.TYPE_STRING),
-        openapi.Parameter('date', openapi.IN_QUERY, description='The date field', type=openapi.TYPE_STRING),
-        openapi.Parameter('time', openapi.IN_QUERY, description='The time field', type=openapi.TYPE_STRING),
-        openapi.Parameter('text', openapi.IN_QUERY, description='The searchbar text field', type=openapi.TYPE_STRING),
-        openapi.Parameter('sort_type', openapi.IN_QUERY, description='The type sorting field', type=openapi.TYPE_STRING),
-        openapi.Parameter('sort_price', openapi.IN_QUERY, description='The price sorting field', type=openapi.TYPE_STRING),
-        openapi.Parameter('sports', openapi.IN_QUERY, description='The sports field', type=openapi.TYPE_STRING),
-        openapi.Parameter('type', openapi.IN_QUERY, description='The type field', type=openapi.TYPE_INTEGER),
-    ]
-)
-@api_view(['GET'])
-def landing_page(request):
-    price = request.GET.get('price')
-    city = request.GET.get('city')
-    sports = request.GET.getlist('sports[]')
-    type = request.GET.getlist('type[]')
-    date = request.GET.get('date')
-    time = request.GET.get('time')
-    search_text = request.GET.get('searchText')
-    sort_type = request.GET.get('sort_type')
-    sort_price = request.GET.get('sort_price')
-
-    queryset = SportHall.objects.all()
-
-    if city:
-        queryset = queryset.filter(city=city)
-
-    if type:
-        queryset = queryset.filter(type__in=type)
-
-    if price:
-        queryset = queryset.filter(price__lte=price)
-
-    if search_text:
-        queryset = queryset.filter(title__icontains=search_text)
-
-    if sort_type:
-        if sort_type == 'Unutrašnji':
-            queryset = queryset.order_by('type')
-        elif sort_type == 'Vanjski':
-            queryset = queryset.order_by('-type')
-
-    if sort_price:
-        if sort_price == 'Najjeftiniji':
-            queryset = queryset.order_by('price')
-        elif sort_price == 'Najskuplji':
-            queryset = queryset.order_by('-price')
-
-    filtered_items = []
-    for item in queryset:
-        sports_string = item.sports
-        sports_list = json.loads(sports_string)
-        if any(sport in sports_list['sports'] for sport in sports):
-            filtered_items.append(model_to_dict(item))
-
-    return JsonResponse({'data': filtered_items})
-
-
-
-@swagger_auto_schema(
-    tags=['Landing page'],
+    tags=['Sport Hall'],
     method='get',
     manual_parameters=[
         openapi.Parameter('price', openapi.IN_QUERY,
@@ -336,7 +276,7 @@ def landing_page(request):
     ]
 )
 @api_view(['GET'])
-def landing_page(request):
+def get_filtered_sport_halls(request):
     price = request.GET.get('price')
     city = request.GET.get('city')
     sports = request.GET.getlist('sports[]')
@@ -380,7 +320,7 @@ def landing_page(request):
         if any(sport in sports_list['sports'] for sport in sports):
             filtered_items.append(model_to_dict(item))
 
-    return JsonResponse({'data': filtered_items})
+    return JsonResponse({'status': True, 'data': filtered_items}, status=status.HTTP_200_OK)
 
 
 @swagger_auto_schema(
