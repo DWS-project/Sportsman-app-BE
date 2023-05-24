@@ -381,13 +381,13 @@ def update_user_password(request, id):
             if new_password == new_repeated_password:
                 user.password = make_password(new_password)
                 user.save()
-                return Response({'success': True}, status=status.HTTP_200_OK)
+                return JsonResponse({'success': True}, status=status.HTTP_200_OK)
             else:
-                return Response({'message': "Sifre se ne poklapaju"}, status=status.HTTP_400_BAD_REQUEST)
+                return JsonResponse({'message': "Sifre se ne poklapaju"}, status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response({'message': "Netacna sifra"}, status=status.HTTP_400_BAD_REQUEST)
+            return JsonResponse({'message': "Netacna sifra"}, status=status.HTTP_400_BAD_REQUEST)
     except:
-        return Response({'success': False, 'message': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({'success': False, 'message': 'Korisnik ne postoji'}, status=status.HTTP_404_NOT_FOUND)
 
 
 @swagger_auto_schema(
@@ -416,7 +416,6 @@ def update_user_photo(request, id):
         blob.upload_from_file(uploaded_file)
         url = blob.generate_signed_url(expiration=datetime.timedelta(days=7))
         image_url = url
-        print(image_url)
         user.picture = image_url
         user.save()
         return Response({'success': True}, status=status.HTTP_200_OK)
