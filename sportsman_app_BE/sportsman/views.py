@@ -184,7 +184,9 @@ def login(request):
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh)
             user.access_token = access_token
-
+            user_picture = None
+            if user.picture:
+                user_picture = user.picture
             response.set_cookie(
                 "Authentication", access_token, 86400, httponly=True)
 
@@ -192,7 +194,7 @@ def login(request):
                                       "email": user.email, "username": user.username,
                                       "tel_number": user.tel_number, "age": user.age, "city": user.city,
                                       "interests": user.interests,
-                                      "name": user.name, "surname": user.surname, "picture": user.picture}}
+                                      "name": user.name, "surname": user.surname, "picture": user_picture}}
             response.message = "Login successfully"
 
             return response
@@ -209,7 +211,9 @@ def login(request):
             refresh = RefreshToken.for_user(owner)
             access_token = str(refresh)
             owner.access_token = access_token
-
+            owner_picture = None
+            if owner.picture:
+                user_picture = owner.picture
             response.set_cookie(
                 "Authentication", access_token, 86400, httponly=True)
 
@@ -217,7 +221,7 @@ def login(request):
                                        "email": owner.email, "username": owner.username,
                                        "tel_number": owner.tel_number, "location": owner.location,
                                        "capacity": owner.capacity, "name": owner.name, "surname": owner.surname,
-                                       "picture": owner.picture}}
+                                       "picture": owner_picture}}
             response.message = "Login successfully"
 
             return response
@@ -247,9 +251,8 @@ def logout(request):
                      "data": {},
                      }, status=status.HTTP_200_OK)
 
-
 @swagger_auto_schema(
-    tags=['Landing page'],
+    tags=['Sport Hall'],
     method='get',
     manual_parameters=[
         openapi.Parameter('price', openapi.IN_QUERY,
@@ -273,7 +276,7 @@ def logout(request):
     ]
 )
 @api_view(['GET'])
-def landing_page(request):
+def get_filtered_sport_halls(request):
     price = request.GET.get('price')
     city = request.GET.get('city')
     sports = request.GET.getlist('sports[]')
@@ -317,7 +320,7 @@ def landing_page(request):
         if any(sport in sports_list['sports'] for sport in sports):
             filtered_items.append(model_to_dict(item))
 
-    return JsonResponse({'data': filtered_items})
+    return JsonResponse({'status': True, 'data': filtered_items}, status=status.HTTP_200_OK)
 
 
 @swagger_auto_schema(
