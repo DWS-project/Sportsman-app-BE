@@ -213,7 +213,7 @@ def login(request):
             owner.access_token = access_token
             owner_picture = None
             if owner.picture:
-                user_picture = owner.picture
+                owner_picture = owner.picture
             response.set_cookie(
                 "Authentication", access_token, 86400, httponly=True)
 
