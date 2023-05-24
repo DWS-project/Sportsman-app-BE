@@ -1,3 +1,11 @@
+import datetime
+import json
+import firebase_admin
+from django.http import JsonResponse
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework.decorators import api_view
+from django.core.exceptions import ObjectDoesNotExist
 import json
 from os import environ
 import jwt
@@ -9,6 +17,12 @@ from django.http import JsonResponse
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import api_view
+from django.contrib.auth.hashers import make_password
+from django.contrib.auth.hashers import check_password
+import json
+
+from rest_framework.response import Response
+
 from django.core.mail import EmailMessage
 
 from django.contrib.auth.hashers import make_password, check_password
@@ -21,6 +35,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import status
 from rest_framework.response import Response
 from django.core.mail import send_mail
+from firebase_admin import storage
 from django.core import serializers
 
 
@@ -420,6 +435,229 @@ def get_all_sport_halls(request):
         'title', 'city', 'address', 'description', 'status', 'price', 'pictures', 'owner_id', 'id'))
     return JsonResponse(sport_halls, safe=False, status=status.HTTP_200_OK)
 
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: "OK",
+        404: "User not found"
+    }
+)
+@api_view(['GET'])
+def get_player_data(request, id):
+    try:
+        user = list(User.objects.filter(id=id).values())
+        return JsonResponse(user, safe=False, status=status.HTTP_200_OK)
+    except User.DoesNotExist:
+        return JsonResponse({"error": "Korisnik nije pronađen"}, status=status.HTTP_404_NOT_FOUND)
+
+@swagger_auto_schema(
+    method='put',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'name': openapi.Schema(type=openapi.TYPE_STRING, description='The name field'),
+            'surname': openapi.Schema(type=openapi.TYPE_STRING, description='The surname field'),
+            'username': openapi.Schema(type=openapi.TYPE_STRING, description='The username field'),
+            'tel_number': openapi.Schema(type=openapi.TYPE_STRING, description='The telephone number field'),
+            'city': openapi.Schema(type=openapi.TYPE_STRING, description='The city field'),
+            'age': openapi.Schema(type=openapi.TYPE_INTEGER, description='The age field'),
+        },
+        required=['name', 'surname', 'username', 'tel_number', 'city', 'age']
+
+    ),
+    responses={
+        200: "OK",
+        404: "User not found"
+    }
+)
+@api_view(['PUT'])
+def update_player_data(request, id):
+    try:
+        user = User.objects.get(id=id)
+        data = request.data
+        user.username = data.get('username')
+        user.name = data.get('name')
+        user.surname = data.get('surname')
+        user.tel_number = data.get('tel_number')
+        user.city = data.get('city')
+        user.age = data.get('age')
+        user.save()
+        return JsonResponse({'status': True, 'message': 'Podatci uspješno promijenjeni'}, status=status.HTTP_200_OK)
+    except:
+        return JsonResponse({'status': False, 'message': 'Korisnik nije pronađen'}, status=status.HTTP_404_NOT_FOUND)
+
+@swagger_auto_schema(
+    method='put',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'new_password': openapi.Schema(type=openapi.TYPE_STRING, description='The new password field'),
+            'new_repeated_password': openapi.Schema(type=openapi.TYPE_STRING, description='The new repeated password field'),
+            'old_password': openapi.Schema(type=openapi.TYPE_STRING, description='The old password field'),
+        },
+        required=['new_password', 'new_repeated_password', 'old_password']
+    ),
+    responses={
+        200: "OK",
+        404: "User not found",
+        400: "Bad request",
+    }
+)
+@api_view(['PUT'])
+def update_player_password(request, id):
+    try:
+        user = User.objects.get(id=id)
+        data = request.data
+        old_password = data.get('oldPassword')
+        new_password = data.get('newPassword')
+        new_repeated_password = data.get('newRepeatedPassword')
+        is_password_valid = check_password(old_password, user.password)
+        if is_password_valid:
+            if new_password == new_repeated_password:
+                user.password = make_password(new_password)
+                user.save()
+                return JsonResponse({'status': True, 'message': 'Lozinka uspješno promijenjena'},
+                                    status=status.HTTP_200_OK)
+            else:
+                return JsonResponse({'status': False, 'message': "Lozinke se ne podudaraju"},
+                                    status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return JsonResponse({'status': False, 'message': "Pogrešna lozinka"}, status=status.HTTP_400_BAD_REQUEST)
+    except:
+        return JsonResponse({'status': False, 'message': 'Korisnik ne postoji'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@swagger_auto_schema(
+    method='put',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'photo': openapi.Schema(type=openapi.TYPE_FILE, description='Photo field'),
+        },
+        required=['photo']
+    ),
+    responses={
+        200: "OK",
+        404: "User not found",
+    }
+)
+@api_view(['PUT'])
+def update_player_photo(request, id):
+    uploaded_file = request.FILES.get('photo')
+    user = User.objects.get(id=id)
+    if uploaded_file:
+        bucket = storage.bucket()
+        filename = uploaded_file.name
+        blob = bucket.blob(filename)
+        blob.content_type = 'image/jpeg'
+        blob.upload_from_file(uploaded_file)
+        url = blob.generate_signed_url(expiration=datetime.timedelta(days=7))
+        image_url = url
+        user.picture = image_url
+        user.save()
+        return JsonResponse({'status': True, 'message': 'Slika profila uspješno promijenjena'},
+                            status=status.HTTP_200_OK)
+    else:
+        return JsonResponse({'status': False, 'message': 'Korisnik nije pronađen'},
+                            status=status.HTTP_404_NOT_FOUND)
+
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: "OK",
+        404: "User not found"
+    }
+)
+@api_view(['GET'])
+def get_owner_data(request, id):
+    try:
+        owner = list(Owner.objects.filter(id=id).values())
+        return JsonResponse(owner, safe=False, status=status.HTTP_200_OK)
+    except User.DoesNotExist:
+        return JsonResponse({"error": "Korisnik nije pronađen"}, status=status.HTTP_404_NOT_FOUND)
+
+
+@swagger_auto_schema(
+    method='put',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'name': openapi.Schema(type=openapi.TYPE_STRING, description='The name field'),
+            'surname': openapi.Schema(type=openapi.TYPE_STRING, description='The surname field'),
+            'username': openapi.Schema(type=openapi.TYPE_STRING, description='The username field'),
+            'tel_number': openapi.Schema(type=openapi.TYPE_STRING, description='The telephone number field'),
+            'city': openapi.Schema(type=openapi.TYPE_STRING, description='The city field'),
+            'capacity': openapi.Schema(type=openapi.TYPE_INTEGER, description='The capacity field'),
+            'street': openapi.Schema(type=openapi.TYPE_STRING, description='The street field'),
+            'streetNumber': openapi.Schema(type=openapi.TYPE_STRING, description='The street number field'),
+            'type': openapi.Schema(type=openapi.TYPE_STRING, description='The type field'),
+        },
+        required=['name', 'surname', 'username', 'tel_number', 'city',
+                  'capacity', 'street', 'streetNumber', 'type']
+    )
+)
+@api_view(['PUT'])
+def update_owner_data(request, id):
+    try:
+        owner = Owner.objects.get(id=id)
+        data = request.data
+        owner.username = data.get('username')
+        owner.name = data.get('name')
+        owner.surname = data.get('surname')
+        owner.tel_number = data.get('tel_number')
+        city = data.get('city')
+        street = data.get('street')
+        street_number = data.get('streetNumber')
+        location = json.dumps(
+            {"city": city, "street": street, "streetNumber": street_number})
+        owner.location = location
+        owner.capacity = data.get('capacity')
+        owner.type = data.get('type')
+        owner.save()
+        return JsonResponse({'status': True, 'message': 'Podatci uspješno promijenjeni'}, status=status.HTTP_200_OK)
+    except:
+        return JsonResponse({'status': False, 'message': 'Korisnik nije pronađen'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@swagger_auto_schema(
+    method='put',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'new_password': openapi.Schema(type=openapi.TYPE_STRING, description='The new password field'),
+            'new_repeated_password': openapi.Schema(type=openapi.TYPE_STRING, description='The new repeated password field'),
+            'old_password': openapi.Schema(type=openapi.TYPE_STRING, description='The old password field'),
+        },
+        required=['new_password', 'new_repeated_password', 'old_password']
+    ),
+    responses={
+        200: "OK",
+        404: "User not found",
+        400: "Bad request",
+    }
+)
+@api_view(['PUT'])
+def update_owner_password(request, id):
+    try:
+        owner = Owner.objects.get(id=id)
+        data = request.data
+        old_password = data.get('oldPassword')
+        new_password = data.get('newPassword')
+        new_repeated_password = data.get('newRepeatedPassword')
+        is_password_valid = check_password(old_password, owner.password)
+        if is_password_valid:
+            if new_password == new_repeated_password:
+                owner.password = make_password(new_password)
+                owner.save()
+                return JsonResponse({'status': True, 'message': 'Podatci uspješno promijenjeni'},
+                                    status=status.HTTP_200_OK)
+            else:
+                return JsonResponse({'status': False, 'message': 'Lozinke se ne podudaraju'},
+                                    status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return JsonResponse({'success': False, 'message': 'Pogrešna lozinka'}, status=status.HTTP_400_BAD_REQUEST)
+    except:
+        return JsonResponse({'success': False, 'message': 'Korisnik nije pronađen'}, status=status.HTTP_404_NOT_FOUND)
 
 @swagger_auto_schema(
     tags=['Sport Hall'],
@@ -462,7 +700,7 @@ def add_new_sport_hall(request):
         SportHall.objects.create(title=title, city=city, address=address,
                                  description=description, status=sport_hall_status, price=price, capacity=capacity,
                                  owner_id_id=owner_id, pictures=pictures)
-        return Response({'data': {title, city, address, description, price}, 'message': 'Uspješno kreiran novi teren.'},
+        return JsonResponse({'data': {title, city, address, description, price}, 'message': 'Uspješno kreiran novi teren.'},
                         status=status.HTTP_200_OK)
     else:
         return JsonResponse({'data': {}, 'message': 'Došlo je do greške.'}, status=status.HTTP_400_BAD_REQUEST)

@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "sportsmanappcloud",
+  "private_key_id": "8a754ff6df062f77c91bd4c1e2f14ae811e48c26",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCmM790T0k61CEG\nkCzBjcWnrdgHlfnY6HeShDJerHXHvjuW4par+ATxcVhx8OpmcUoIMQp+0HcobS83\nw5XrD57MLDiTStJ8oLkFy2E0xY/oggQisX6a5xJLX4Pr7CAHtT4p15SjGNlknI3/\n4u4rO4zOTqm38dToJim03srldtFK9Cxiwgx4e+G1i3SLDEVcBLczCK3XsI4H7lEf\nzr2gTDQLkjsAzCbflJs3t1QNAx27gJ+buxaI5hyHSZcmlgWmbdk2dTrqwaVCrdtJ\nFtCG68u+8yQCjotymKtKYExM+K7MKyuoHEM6u7U2P7jK2ahpGawvOLsB8znqS0TX\n0Z82r3cJAgMBAAECggEARB/r9xHUs29mBhmsrr2c6glBBoL8AWPwNzdGqjXIpVId\nfNBt8BledVT/atzUR59iOA9Z/PcYEJMIirP5zHr/nTL3EbDWrEz46h4ePxJH1YcN\niOb2PSo//nMtUNPdoSsyStZZz6yM10ewkNWEyGXFZn8p5AMVQP77k27K/dmBGlZo\nSwEMvT6QkG4R2k4lyeSyD3V0khvAz35RbjvEtNPwTaRlgYynD3eqjB+Uu7EUdt6i\nREDVG0UDf8CKEhuMCmhYYXZKcYU8+Bs9E8Wh+amacZtoyVjAaryo+JT6/DyjP6Th\nFQ/eidNlAKhVerzIJrMWc6xjYMfY3YvI9j90g1yUvQKBgQDaCWFk+Hz3qq3KKnxM\neOVI8/4DtmBiowMdp2h1RpaTYD1ZXMwvXAhVHS/6yHmytAIHfAMn4I6UZ54OGHHL\n1tcogN/z5jgQNYP0pkEkHbfHPfT1MMW/pTpRRhdovb8yEr6XW/rddD2b2L0C7Ugf\ntOscgmyOg03Cet65MY+TTY5hcwKBgQDDI+5TyX8aFRhKV2nrLtK8JrUClxlOmFcs\nwYx1sA2dh0YF4hNiAjYr78uys+AqrL2uMjImI6qYkw6UpZpT4oyg98VdqZQDQr0K\nM4nY06LswObBOops8nU8TOcM2aWKmNmVi93Q1iG1ffm8nKiFYgNrEEpi7+MjMoDK\npC+grFP2kwKBgQDDvVYdQmNWKHj6nKeYM5SLqNeq14iyJGwArDC/0A4P4n9RAVkh\nTzr/xkMzndR7VNTZiUCABT2bB2bCerl2aLoh14i2OkCsdI6xDKxAUxmQmhOWJyHw\nSdIP8p/DXU0PE/rcgSu2scs5ZRtSTFjKdi34GzJ/wmsFpC7dDRw6/o5K9wKBgQC1\nNJNmOLEPTlFtDzkrDCLiVus1SYxVgH9K7zv4ORCbnHb4lZO8KiOVryovensKBbhp\nnvEUm4AaCEy82f6yMKi3/PzIWeU5FesnIu65auVbBlIBUtQiEQ+ufBb9xsnDJua9\nyNCk0YMh3qZeb/bJTVexPsJklzALiiUwh0A26m9ZgwKBgBnZjNfhlNMNIO1zKvsa\n056gM9YKbQJzxIdHDk7CXE5WPcXKOH1i6BOicm+h4gTEvkHNBZMWMMMv3/8QSI6b\nBaT21wG5mF9Gbt42zVB5xOquJbcvvpA3vCPg7N5n5uks8oo/bQbFEhtuMeuRxMS2\nTyj5d+H+AIRXP7WLwzJfpBeo\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-vvnfn@sportsmanappcloud.iam.gserviceaccount.com",
+  "client_id": "117137267261142863195",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-vvnfn%40sportsmanappcloud.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
