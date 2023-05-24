@@ -437,12 +437,12 @@ def get_all_sport_halls(request):
     }
 )
 @api_view(['GET'])
-def get_user_data(request, id):
+def get_player_data(request, id):
     try:
         user = list(User.objects.filter(id=id).values())
-        return JsonResponse(user, safe=False, status = status.HTTP_200_OK)
+        return JsonResponse(user, safe=False, status=status.HTTP_200_OK)
     except User.DoesNotExist:
-        return JsonResponse({"error":"User not found"}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({"error": "Korisnik nije pronađen"}, status=status.HTTP_404_NOT_FOUND)
 
 @swagger_auto_schema(
     method='put',
@@ -465,19 +465,20 @@ def get_user_data(request, id):
     }
 )
 @api_view(['PUT'])
-def update_user(request, id):
+def update_player_data(request, id):
     try:
         user = User.objects.get(id=id)
-        user.username = request.data.get('username')
-        user.name = request.data.get('name')
-        user.surname = request.data.get('surname')
-        user.tel_number = request.data.get('tel_number')
-        user.city = request.data.get('city')
-        user.age = request.data.get('age')
+        data = request.data
+        user.username = data.get('username')
+        user.name = data.get('name')
+        user.surname = data.get('surname')
+        user.tel_number = data.get('tel_number')
+        user.city = data.get('city')
+        user.age = data.get('age')
         user.save()
-        return JsonResponse({'success': True}, status=status.HTTP_200_OK)
+        return JsonResponse({'status': True, 'message': 'Podatci uspješno promijenjeni'}, status=status.HTTP_200_OK)
     except:
-        return JsonResponse({'success': False, 'message': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({'status': False, 'message': 'Korisnik nije pronađen'}, status=status.HTTP_404_NOT_FOUND)
 
 @swagger_auto_schema(
     method='put',
@@ -497,24 +498,27 @@ def update_user(request, id):
     }
 )
 @api_view(['PUT'])
-def update_user_password(request, id):
+def update_player_password(request, id):
     try:
         user = User.objects.get(id=id)
-        old_password = request.data.get('password3')
-        new_password = request.data.get('password1')
-        new_repeated_password = request.data.get('password2')
+        data = request.data
+        old_password = data.get('oldPassword')
+        new_password = data.get('newPassword')
+        new_repeated_password = data.get('newRepeatedPassword')
         is_password_valid = check_password(old_password, user.password)
         if is_password_valid:
             if new_password == new_repeated_password:
                 user.password = make_password(new_password)
                 user.save()
-                return JsonResponse({'success': True}, status=status.HTTP_200_OK)
+                return JsonResponse({'status': True, 'message': 'Lozinka uspješno promijenjena'},
+                                    status=status.HTTP_200_OK)
             else:
-                return JsonResponse({'message': "Sifre se ne poklapaju"}, status=status.HTTP_400_BAD_REQUEST)
+                return JsonResponse({'status': False, 'message': "Lozinke se ne podudaraju"},
+                                    status=status.HTTP_400_BAD_REQUEST)
         else:
-            return JsonResponse({'message': "Netacna sifra"}, status=status.HTTP_400_BAD_REQUEST)
+            return JsonResponse({'status': False, 'message': "Pogrešna lozinka"}, status=status.HTTP_400_BAD_REQUEST)
     except:
-        return JsonResponse({'success': False, 'message': 'Korisnik ne postoji'}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({'status': False, 'message': 'Korisnik ne postoji'}, status=status.HTTP_404_NOT_FOUND)
 
 
 @swagger_auto_schema(
@@ -532,7 +536,7 @@ def update_user_password(request, id):
     }
 )
 @api_view(['PUT'])
-def update_user_photo(request, id):
+def update_player_photo(request, id):
     uploaded_file = request.FILES.get('photo')
     user = User.objects.get(id=id)
     if uploaded_file:
@@ -545,9 +549,11 @@ def update_user_photo(request, id):
         image_url = url
         user.picture = image_url
         user.save()
-        return Response({'success': True}, status=status.HTTP_200_OK)
+        return JsonResponse({'status': True, 'message': 'Slika profila uspješno promijenjena'},
+                            status=status.HTTP_200_OK)
     else:
-        return Response({'success': False, 'message': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({'status': False, 'message': 'Korisnik nije pronađen'},
+                            status=status.HTTP_404_NOT_FOUND)
 
 @swagger_auto_schema(
     method='get',
@@ -560,9 +566,11 @@ def update_user_photo(request, id):
 def get_owner_data(request, id):
     try:
         owner = list(Owner.objects.filter(id=id).values())
-        return JsonResponse(owner, safe=False, status = status.HTTP_200_OK)
+        return JsonResponse(owner, safe=False, status=status.HTTP_200_OK)
     except User.DoesNotExist:
-        return JsonResponse({"error":"User not found"}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({"error": "Korisnik nije pronađen"}, status=status.HTTP_404_NOT_FOUND)
+
+
 @swagger_auto_schema(
     method='put',
     request_body=openapi.Schema(
@@ -583,25 +591,27 @@ def get_owner_data(request, id):
     )
 )
 @api_view(['PUT'])
-def update_owner(request, id):
+def update_owner_data(request, id):
     try:
         owner = Owner.objects.get(id=id)
-        owner.username = request.data.get('username')
-        owner.name = request.data.get('name')
-        owner.surname = request.data.get('surname')
-        owner.tel_number = request.data.get('tel_number')
-        city = request.data.get('city')
-        street = request.data.get('street')
-        street_number = request.data.get('streetNumber')
+        data = request.data
+        owner.username = data.get('username')
+        owner.name = data.get('name')
+        owner.surname = data.get('surname')
+        owner.tel_number = data.get('tel_number')
+        city = data.get('city')
+        street = data.get('street')
+        street_number = data.get('streetNumber')
         location = json.dumps(
             {"city": city, "street": street, "streetNumber": street_number})
         owner.location = location
-        owner.capacity = request.data.get('capacity')
-        owner.type = request.data.get('type')
+        owner.capacity = data.get('capacity')
+        owner.type = data.get('type')
         owner.save()
-        return JsonResponse({'success': True}, status=status.HTTP_200_OK)
+        return JsonResponse({'status': True, 'message': 'Podatci uspješno promijenjeni'}, status=status.HTTP_200_OK)
     except:
-        return JsonResponse({'success': False, 'message': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({'status': False, 'message': 'Korisnik nije pronađen'}, status=status.HTTP_404_NOT_FOUND)
+
 
 @swagger_auto_schema(
     method='put',
@@ -624,21 +634,24 @@ def update_owner(request, id):
 def update_owner_password(request, id):
     try:
         owner = Owner.objects.get(id=id)
-        old_password = request.data.get('password3')
-        new_password = request.data.get('password1')
-        new_repeated_password = request.data.get('password2')
+        data = request.data
+        old_password = data.get('oldPassword')
+        new_password = data.get('newPassword')
+        new_repeated_password = data.get('newRepeatedPassword')
         is_password_valid = check_password(old_password, owner.password)
         if is_password_valid:
             if new_password == new_repeated_password:
                 owner.password = make_password(new_password)
                 owner.save()
-                return Response({'success': True}, status=status.HTTP_200_OK)
+                return JsonResponse({'status': True, 'message': 'Podatci uspješno promijenjeni'},
+                                    status=status.HTTP_200_OK)
             else:
-                return Response({'message': "Sifre se ne poklapaju"}, status=status.HTTP_400_BAD_REQUEST)
+                return JsonResponse({'status': False, 'message': 'Lozinke se ne podudaraju'},
+                                    status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response({'message': "Netacna sifra"}, status=status.HTTP_400_BAD_REQUEST)
+            return JsonResponse({'success': False, 'message': 'Pogrešna lozinka'}, status=status.HTTP_400_BAD_REQUEST)
     except:
-        return Response({'success': False, 'message': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({'success': False, 'message': 'Korisnik nije pronađen'}, status=status.HTTP_404_NOT_FOUND)
 
 @swagger_auto_schema(
     tags=['Sport Hall'],
@@ -681,7 +694,7 @@ def add_new_sport_hall(request):
         SportHall.objects.create(title=title, city=city, address=address,
                                  description=description, status=sport_hall_status, price=price, capacity=capacity,
                                  owner_id_id=owner_id, pictures=pictures)
-        return Response({'data': {title, city, address, description, price}, 'message': 'Uspješno kreiran novi teren.'},
+        return JsonResponse({'data': {title, city, address, description, price}, 'message': 'Uspješno kreiran novi teren.'},
                         status=status.HTTP_200_OK)
     else:
         return JsonResponse({'data': {}, 'message': 'Došlo je do greške.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -853,25 +866,3 @@ def confirm_email(request):
         return Response({'message': 'Invalid token'})
 
 
-@api_view(['GET'])
-def get_user_data(request, id):
-    try:
-        user = list(User.objects.filter(id=id).values())
-        return JsonResponse(user, safe=False)
-    except User.DoesNotExist:
-        return JsonResponse({"error":"User not found"})
-
-@api_view(['POST'])
-def update_user(request, id):
-    try:
-        user = User.objects.get(id=id)
-        user.username = request.data.get('username')
-        user.name = request.data.get('name')
-        user.surname = request.data.get('surname')
-        user.tel_number = request.data.get('tel_number')
-        user.city = request.data.get('city')
-        user.age = request.data.get('age')
-        user.save()
-        return JsonResponse({'success': True})
-    except:
-        return JsonResponse({'success': False, 'message': 'User not found.'})
