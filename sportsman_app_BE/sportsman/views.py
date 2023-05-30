@@ -214,7 +214,7 @@ def login(request):
                                       "email": user.email, "username": user.username,
                                       "tel_number": user.tel_number, "age": user.age, "city": user.city,
                                       "interests": user.interests,
-                                      "name": user.name, "surname": user.surname, "picture": user_picture}}
+                                      "name": user.name, "surname": user.surname}}
             response.message = "Login successfully"
 
             return response
@@ -551,8 +551,10 @@ def update_player_photo(request, id):
         blob = bucket.blob(filename)
         blob.content_type = 'image/jpeg'
         blob.upload_from_file(uploaded_file)
-        url = blob.generate_signed_url(expiration=datetime.timedelta(days=7))
-        image_url = url
+
+        blob.make_public()
+
+        image_url = blob.public_url
         user.picture = image_url
         user.save()
         return JsonResponse({'status': True, 'message': 'Slika profila uspješno promijenjena'},
