@@ -947,3 +947,19 @@ def contact_us(request):
 
     return JsonResponse(
         {'message': 'Poštovani, hvala vam što ste nas kontaktirali! Odgovorit ćemo vam u što skorijem roku.'}, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+def get_user_invitations(request, id):
+    invitations = list(Invitations.objects.filter(recipient_id=id).values('id', 'sender__username', 'time_sent', 'status'))
+    return JsonResponse(invitations, safe=False, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+def get_user_friends(request, id):
+    friends = list(Friends.objects.filter(user1_id=id).values('id', 'user2__username'))
+    return JsonResponse(friends, safe=False, status=status.HTTP_200_OK)
+
+@api_view(['DELETE'])
+def delete_user_friend(request, id):
+    friend = Friends.objects.get(id=id)
+    friend.delete()
+    return JsonResponse({'message': "Korisnik uspjesno obrisan iz prijatelja"}, status=status.HTTP_200_OK)

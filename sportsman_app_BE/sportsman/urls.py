@@ -30,4 +30,7 @@ urlpatterns = [
     path('player/change-profile-photo/<int:id>', views.update_player_photo, name="updateUserPhoto"),
     path('owner/update/<int:id>', views.update_owner_data, name="updateOwner"),
     path('owner/change-password/<int:id>', views.update_owner_password, name="updateOwnerPassword"),
+    path('player/invitations/<int:id>', views.get_user_invitations, name="getUserInvitations"),
+    path('player/friends/<int:id>', views.get_user_friends, name="getUserFriends"),
+    path('player/delete-friend/<int:id>', views.delete_user_friend, name="deleteUserFriend"),
 ]
