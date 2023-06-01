@@ -40,7 +40,7 @@ class Friends(models.Model):
 
 
 class Invitations(models.Model):
-    time_sent = models.DateTimeField()
+    time_sent = models.DateTimeField(null=True)
     sender = models.ForeignKey(
         User, related_name='sent_invitations', on_delete=models.CASCADE)
     recipient = models.ForeignKey(

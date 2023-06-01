@@ -950,7 +950,8 @@ def contact_us(request):
 
 @api_view(['GET'])
 def get_user_invitations(request, id):
-    invitations = list(Invitations.objects.filter(recipient_id=id).values('id', 'sender__username', 'time_sent', 'status'))
+    invitations = list(Invitations.objects.filter(recipient_id=id)
+                       .values('id', 'sender__username', 'time_sent', 'status'))
     return JsonResponse(invitations, safe=False, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
@@ -958,8 +959,42 @@ def get_user_friends(request, id):
     friends = list(Friends.objects.filter(user1_id=id).values('id', 'user2__username'))
     return JsonResponse(friends, safe=False, status=status.HTTP_200_OK)
 
+
 @api_view(['DELETE'])
 def delete_user_friend(request, id):
     friend = Friends.objects.get(id=id)
     friend.delete()
     return JsonResponse({'message': "Korisnik uspjesno obrisan iz prijatelja"}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+def sort_user_invitations(request, id):
+    data = request.GET
+    sorting_column = data.get('column')
+    sorting_order = data.get('order')
+    if sorting_order == 'asc':
+        sorted_queryset = list(Invitations.objects.filter(recipient_id=id)
+                               .values('id', 'sender__username', 'time_sent', 'status')
+                               .order_by(sorting_column))
+    else:
+        sorted_queryset = list(Invitations.objects.filter(recipient_id=id)
+                               .values('id', 'sender__username', 'time_sent', 'status')
+                               .order_by('-' + sorting_column))
+
+    return JsonResponse(sorted_queryset, safe=False, status=status.HTTP_200_OK)
+
+
+@api_view(['PUT'])
+def update_invitation_status(request, id):
+    try:
+        data = request.data
+        invitations = Invitations.objects.get(id=id)
+        invitations.status = data.get('status')
+        invitations.save()
+        return JsonResponse({'status': True, 'message': 'Status uspješno promijenjen'}, status=status.HTTP_200_OK)
+    except Invitations.DoesNotExist:
+        return JsonResponse({'status': False, 'message': 'Korisnik nije pronađen'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        print(str(e))
+        return JsonResponse({'status': False, 'message': 'Greška na serveru'},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
