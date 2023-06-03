@@ -12,3 +12,7 @@ venv/
 __pycache__/
 # Ignore IDE-specific files
 .idea/
+
+#Ignore cloud credentials
+/cloud_key.json
+.env
