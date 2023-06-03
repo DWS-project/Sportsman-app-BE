@@ -1,5 +1,8 @@
 import json
+from datetime import timedelta
+
 from django.http import JsonResponse
+from django.utils import timezone
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import api_view
@@ -142,20 +145,24 @@ def login(request):
     password = data.get('password', None)
 
     if (User.objects.filter(email=email).exists() == True):
+        print("usao")
         user = User.objects.get(email=email)
         is_password_valid = check_password(password, user.password)
         if is_password_valid:
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh)
             user.access_token = access_token
-
+            user_picture = None
+            if user.picture:
+                user_picture = user.picture
             response.set_cookie(
                 "Authentication", access_token, 86400, httponly=True)
 
             response.data = {"user": {"id": user.id,
                                       "email": user.email, "username": user.username,
-                                      "tel_number": user.tel_number, "age": user.age, "city": user.city, "interests": user.interests,
-                                      "name": user.name, "surname": user.surname, "picture": user.picture}}
+                                      "tel_number": user.tel_number, "age": user.age, "city": user.city,
+                                      "interests": user.interests,
+                                      "name": user.name, "surname": user.surname, "picture": user_picture}}
             response.message = "Login successfully"
 
             return response
@@ -172,14 +179,17 @@ def login(request):
             refresh = RefreshToken.for_user(owner)
             access_token = str(refresh)
             owner.access_token = access_token
-
+            owner_picture = None
+            if owner.picture:
+                owner_picture = owner.picture
             response.set_cookie(
                 "Authentication", access_token, 86400, httponly=True)
 
             response.data = {"owner": {"id": owner.id,
                                        "email": owner.email, "username": owner.username,
                                        "tel_number": owner.tel_number, "location": owner.location,
-                                       "capacity": owner.capacity, "name": owner.name, "surname": owner.surname, "picture": owner.picture}}
+                                       "capacity": owner.capacity, "name": owner.name, "surname": owner.surname,
+                                       "picture": owner_picture}}
             response.message = "Login successfully"
 
             return response
@@ -187,6 +197,7 @@ def login(request):
         return Response({"message": "Invalid username or password!!",
                          "data": {},
                          }, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 @swagger_auto_schema(
@@ -473,3 +484,96 @@ def change_sporthall_status(request):
         return JsonResponse({'data': json.loads(obj)}, status=200)
     except:
         return JsonResponse({'data': {}}, status=400)
+
+
+@api_view(['POST'])
+def create_team(request):
+    name = request.data.get('name')
+    lead_id = request.data.get('id')
+    user = User.objects.get(id=lead_id)
+    team_lead = Team.objects.create(team_lead_id_id=lead_id)
+    PermanentTeams.objects.create(team_name=name, team_id_id=team_lead.id)
+    return JsonResponse({'success': True, 'message': 'Uspješno kreiran tim'}, status=201)
+
+
+@api_view(['GET'])
+def get_perm_teams(request):
+    id = request.GET.get('id')
+    list_of_teams = PermanentTeams.objects.filter(team_id__team_lead_id_id=id)
+    res = serializers.serialize('json', list_of_teams)
+    data = []
+
+    for team in serializers.deserialize('json', res):
+        queryset1 = TeamMembers.objects.filter(team_id_id=team.object.team_id_id)
+        res2 = serializers.serialize('json', queryset1)
+
+        if len(res2) != 0:
+            members = []
+
+            for member in serializers.deserialize('json', res2):
+                queryset2 = User.objects.filter(id=member.object.user_id_id)
+                res3 = serializers.serialize('json', queryset2)
+
+                members.append(res3)
+
+            data.append({
+                'id': team.object.team_id.id,
+                'name': team.object.team_name,
+                'members': members
+            })
+
+        else:
+            data.append({
+                'id': team.object.team_id.id,
+                'name': team.object.team_name,
+                'members': {}
+            })
+
+    return JsonResponse(data, safe=False)
+
+
+@api_view(['DELETE'])
+def delete_team(request):
+    team_id = request.GET.get('id')
+    team = PermanentTeams.objects.get(id=team_id)
+    team.delete()
+    return JsonResponse({'message': "Uspješno uklonjen tim.", 'data': {}}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+def invite_team_member(request):
+    lead_id = request.data.get('id')
+    name = request.data.get('username')
+    team_id = request.data.get('team_id')
+    user = User.objects.get(username=name)
+    current_time = timezone.localtime(timezone.now())
+    formatted_time = current_time.strftime('%Y-%m-%d %H:%M:%S')
+    formatted_time = (current_time + timedelta(hours=2)).strftime('%Y-%m-%d %H:%M:%S')
+    team_name = PermanentTeams.objects.get(id=team_id)
+    details_data = {
+        'team_id': team_id,
+        'team_name': team_name.team_name,
+    }
+    details_json = json.dumps(details_data)
+
+    Invitations.objects.create(recipient_id=user.id,sender_id=lead_id, time_sent=formatted_time,
+    status=0, details=details_json)
+    response_data = {
+        'message': 'Invitation sent successfully',
+        'memberName': name,
+
+    }
+
+    return JsonResponse(response_data)
+
+@api_view(['DELETE'])
+def delete_team_member(request):
+    email = request.GET.get('email')
+    user = User.objects.get(email=email)
+    user_id = user.id
+    team_id = request.GET.get('teamId')
+
+    team_member = TeamMembers.objects.get(user_id_id=user_id, team_id_id=team_id)
+    team_member.delete()
+
+    return JsonResponse({'message': "Uspješno uklonjen član tim.", 'data': {}}, status=status.HTTP_200_OK)

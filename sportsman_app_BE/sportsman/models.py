@@ -44,6 +44,7 @@ class Invitations(models.Model):
         User, related_name='received_invitations', on_delete=models.CASCADE)
     status = models.IntegerField()
     details = models.TextField(null=True)
+    type = models.CharField(max_length=20, default="Permanent Team")
 
     def __str__(self):
         return "sender: " + str(self.sender) + " recipient:" + str(self.recipient) + "status"
@@ -66,9 +67,10 @@ class TeamMembers(models.Model):
 
 class PermanentTeams(models.Model):
     team_id = models.ForeignKey(Team, on_delete=models.CASCADE)
+    team_name = models.CharField(max_length=30, null=True)
 
     def __str__(self):
-        return self.team_id
+        return str(self.team_id) + " " + str(self.team_name)
 
 
 class Owner(models.Model):

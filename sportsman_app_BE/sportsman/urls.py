@@ -18,4 +18,10 @@ urlpatterns = [
     path('remove-sport-hall', views.remove_sport_hall, name='removeSportHall'),
     path('change-sport-hall-status',
          views.change_sporthall_status, name='changeSportHallStatus'),
+    path('createTeam/', views.create_team, name='createTeam'),
+    path('getTeams/', views.get_perm_teams, name='getTeams'),
+    path('deleteTeam/', views.delete_team, name='deleteTeam'),
+    path('inviteTeamMember/', views.invite_team_member, name='inviteTeamMember'),
+    path('deleteTeamMember/', views.delete_team_member, name='deleteTeamMember'),
+
 ]
