@@ -1,11 +1,7 @@
 import datetime
 import json
-<<<<<<< HEAD
 from datetime import timedelta
-
-=======
 import firebase_admin
->>>>>>> 0c5628bad9ce2a212e921c7d94e644839115f25d
 from django.http import JsonResponse
 from django.utils import timezone
 from drf_yasg import openapi
@@ -204,7 +200,6 @@ def login(request):
     password = data.get('password', None)
 
     if (User.objects.filter(email=email).exists() == True):
-        print("usao")
         user = User.objects.get(email=email)
         is_password_valid = check_password(password, user.password)
         if is_password_valid:
@@ -240,11 +235,7 @@ def login(request):
             owner.access_token = access_token
             owner_picture = None
             if owner.picture:
-<<<<<<< HEAD
-                owner_picture = owner.picture
-=======
                 user_picture = owner.picture
->>>>>>> 0c5628bad9ce2a212e921c7d94e644839115f25d
             response.set_cookie(
                 "Authentication", access_token, 86400, httponly=True)
 
@@ -260,7 +251,6 @@ def login(request):
         return Response({"message": "Invalid username or password!!",
                          "data": {},
                          }, status=status.HTTP_400_BAD_REQUEST)
-
 
 
 @swagger_auto_schema(
@@ -847,8 +837,6 @@ def change_sporthall_status(request):
     except:
         return JsonResponse({'data': {}}, status=400)
 
-
-<<<<<<< HEAD
 @api_view(['POST'])
 def create_team(request):
     name = request.data.get('name')
@@ -940,7 +928,7 @@ def delete_team_member(request):
     team_member.delete()
 
     return JsonResponse({'message': "Uspješno uklonjen član tim.", 'data': {}}, status=status.HTTP_200_OK)
-=======
+
 @swagger_auto_schema(
     tags=['Authentication'],
     method='post',
@@ -1050,4 +1038,4 @@ def contact_us(request):
 
     return JsonResponse(
         {'message': 'Poštovani, hvala vam što ste nas kontaktirali! Odgovorit ćemo vam u što skorijem roku.'}, status=status.HTTP_200_OK)
->>>>>>> 0c5628bad9ce2a212e921c7d94e644839115f25d
+
