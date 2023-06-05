@@ -47,6 +47,7 @@ class Invitations(models.Model):
         User, related_name='received_invitations', on_delete=models.CASCADE)
     status = models.IntegerField()
     details = models.TextField(null=True)
+    type = models.CharField(max_length=20, default="Permanent Team")
 
     def __str__(self):
         return "sender: " + str(self.sender) + " recipient:" + str(self.recipient) + "status"
@@ -69,9 +70,10 @@ class TeamMembers(models.Model):
 
 class PermanentTeams(models.Model):
     team_id = models.ForeignKey(Team, on_delete=models.CASCADE)
+    team_name = models.CharField(max_length=30, null=True)
 
     def __str__(self):
-        return self.team_id
+        return str(self.team_id) + " " + str(self.team_name)
 
 
 class Owner(models.Model):
@@ -124,3 +126,21 @@ class Games(models.Model):
 
     def __str__(self):
         return "hall: " + str(self.hall_name) + " Team_id: " + str(self.team_id) + "status: " + str(self.status)
+
+
+class Reservations(models.Model):
+    sport_hall_id = models.ForeignKey(SportHall, on_delete=models.CASCADE)
+    user_id = models.IntegerField(null=True)
+    date = models.DateField(null=True)
+    time_from = models.TimeField(null=True)
+    time_to = models.TimeField(null=True)
+    name = models.CharField(max_length=50)
+    surname = models.CharField(max_length=50)
+    email = models.EmailField(max_length=50)
+    tel_number = models.CharField(max_length=20)
+    team_id = models.IntegerField(null=True)
+
+    def __str__(self):
+        return "TimeBegin: " + str(self.time_from) + " TimeEnd: " + \
+            str(self.time_to) + " email: " + str(self.email) + \
+            " id: " + str(self.user_id)

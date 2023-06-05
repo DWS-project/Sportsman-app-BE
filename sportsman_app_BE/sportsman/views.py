@@ -1,7 +1,9 @@
-import datetime
 import json
 #import firebase_admin
 from django.http import JsonResponse
+import datetime
+from django.utils import timezone
+from datetime import datetime, timedelta
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import api_view
@@ -754,6 +756,42 @@ def get_sport_hall(request):
     obj = serializers.serialize('json', array_of_sporthalls)
     return JsonResponse({'data': json.loads(obj)}, status=status.HTTP_200_OK)
 
+@api_view(['GET'])
+def get_sport_hall_user(request):
+    sporthall_id = request.GET.get('id')
+    sporthall = SportHall.objects.get(id=sporthall_id)
+    sporthall_data = model_to_dict(sporthall)
+    if sporthall:
+        return JsonResponse({'status': True, 'data': sporthall_data}, status=status.HTTP_200_OK)
+    else:
+        return JsonResponse({'status': False, 'data': {}}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+def get_sport_hall_reservations(request):
+    sporthall_id = request.GET.get('id')
+    try:
+        reservations = list(Reservations.objects.filter(sport_hall_id_id=sporthall_id).values())
+        return JsonResponse({'status': True, 'data': reservations}, status=status.HTTP_200_OK)
+    except Reservations.DoesNotExist:
+        return JsonResponse({'status': False, 'data': {}})
+
+@api_view(['GET'])
+def get_friends(request):
+    user_id = request.GET.get('id')
+    friend_ids = []
+    friends_user1 = Friends.objects.filter(user1=user_id).values_list("user2_id", flat=True)
+    friend_ids.extend(friends_user1)
+
+    friends_user2 = Friends.objects.filter(user2=user_id).values_list("user1_id", flat=True)
+    friend_ids.extend(friends_user2)
+
+    friend_ids = list(set(friend_ids))
+    friends_data = User.objects.filter(id__in=friend_ids).values()
+    friends_data_list = list(friends_data)
+    if friend_ids:
+        return JsonResponse({'status': True, 'data': friends_data_list}, status=status.HTTP_200_OK)
+    else:
+        return JsonResponse({'status': False, 'data': {}})
 
 @swagger_auto_schema(
     tags=['Sport Hall'],
@@ -944,3 +982,111 @@ def contact_us(request):
 
     return JsonResponse(
         {'message': 'Poštovani, hvala vam što ste nas kontaktirali! Odgovorit ćemo vam u što skorijem roku.'}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+def reservation(request):
+    try:
+        data = request.data
+        name = data.get('name')
+        surname = data.get('surname')
+        email = data.get('email')
+        phone = data.get('phone')
+        date = data.get('date')
+        time_from = data.get('fromTime')
+        time_to = data.get('toTime')
+        sport_hall_id = data.get('sportHallId')
+        user_id = data.get('userId')
+        team_id = data.get('teamId')
+        reservation_type = data.get('type')
+        team_members = data.get('teamMembers')
+
+        if reservation_type not in ['temporary', 'permanent', 'reservation']:
+            raise ValueError('Invalid reservation type.')
+
+        if reservation_type == 'temporary':
+            team = Team.objects.create(team_lead_id_id=user_id)
+            team_id = team.id
+            for member in team_members:
+                TeamMembers.objects.create(user_id_id=member['id'], team_id_id=team.id)
+
+        reservation = Reservations.objects.create(name=name, surname=surname, email=email, tel_number=phone,
+                                                  date=date, time_from=time_from, time_to=time_to, team_id=team_id,
+                                                  sport_hall_id_id=sport_hall_id, user_id=user_id)
+        if reservation:
+            return JsonResponse({'status': True}, status=status.HTTP_200_OK)
+        else:
+            return JsonResponse({'status': False, 'message': 'Failed to create reservation.'},
+                                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except ValueError as ve:
+        return JsonResponse({'status': False, 'message': str(ve)}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return JsonResponse({'status': False, 'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+def get_teams(request):
+    user_id = request.GET.get('id')
+    try:
+        teams = list(PermanentTeams.objects.filter(team_id__team_lead_id_id=user_id).values())
+        return JsonResponse({'status': True, 'data': teams}, status=status.HTTP_200_OK)
+    except PermanentTeams.DoesNotExist:
+        return JsonResponse({'status': False, 'data': {}})
+
+@api_view(['GET'])
+def get_users(request):
+    search_text = request.GET.get('searchText')
+    try:
+        users = list(User.objects.filter(username__icontains=search_text).values())
+        return JsonResponse({'status': True, 'data': users}, status=status.HTTP_200_OK)
+    except PermanentTeams.DoesNotExist:
+        return JsonResponse({'status': False, 'data': {}})
+
+@api_view(['POST'])
+def invite_temporary_team(request):
+    sender_id = request.data.get('senderId')
+    recipient_id = request.data.get('recipientId')
+    sport_hall_id = request.data.get('sportHallId')
+    sport_hall_title = request.data.get('sportHallTitle')
+    current_time = timezone.localtime(timezone.now())
+    formatted_time = current_time.strftime('%Y-%m-%d %H:%M:%S')
+    details_data = {
+        'sport_hall_id': sport_hall_id,
+        'sport_hall_title': sport_hall_title,
+    }
+    details_json = json.dumps(details_data)
+    invite = Invitations.objects.create(sender_id=sender_id, recipient_id=recipient_id, time_sent=formatted_time,
+                                        status=0, details=details_json, type='Temporary')
+    invite_data = {
+        'model': 'sportsman.invitations',
+        'fields': {
+            'id': invite.id,
+            'sender': invite.sender_id,
+            'recipient': invite.recipient_id,
+            'status': invite.status,
+            'details': invite.details,
+            'type': invite.type,
+            'time_sent': invite.time_sent,
+        },
+    }
+
+    invite_json = json.dumps(invite_data)
+    deserialized_invite = json.loads(invite_json)
+
+    return JsonResponse({'status': True, 'data': deserialized_invite})
+
+@api_view(['DELETE'])
+def remove_invite_temporary_team(request):
+    invite_id = request.GET.get('id')
+    invite = Invitations.objects.get(id=invite_id)
+    invite.delete()
+    return JsonResponse({'status': True}, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+def get_user(request):
+    invitation_id = request.GET.get('invitationId')
+    try:
+        invitation = Invitations.objects.get(id=invitation_id)
+        user_id = invitation.recipient_id
+        user = list(User.objects.filter(id=user_id).values())
+        return JsonResponse({'status': True, 'data': user}, status=status.HTTP_200_OK)
+    except Invitations.DoesNotExist:
+        return JsonResponse({'status': False, 'data': {}})
