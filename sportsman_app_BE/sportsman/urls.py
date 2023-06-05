@@ -22,6 +22,11 @@ urlpatterns = [
     path('remove-sport-hall', views.remove_sport_hall, name='removeSportHall'),
     path('change-sport-hall-status',
          views.change_sporthall_status, name='changeSportHallStatus'),
+    path('createTeam/', views.create_team, name='createTeam'),
+    path('getTeams/', views.get_perm_teams, name='getTeams'),
+    path('deleteTeam/', views.delete_team, name='deleteTeam'),
+    path('inviteTeamMember/', views.invite_team_member, name='inviteTeamMember'),
+    path('deleteTeamMember/', views.delete_team_member, name='deleteTeamMember'),
     path('contact-us', views.contact_us, name='contactUs'),
     path('player/<int:id>', views.get_player_data, name="getPlayerData"),
     path('owner/<int:id>', views.get_owner_data, name="getOwnerData"),
@@ -36,4 +41,5 @@ urlpatterns = [
     path('player/delete-friend/<int:id>', views.delete_player_friend, name="deletePlayerFriend"),
     path('player/sort-invitations/<int:id>', views.sort_player_invitations, name="sortPlayerInvitations"),
     path('player/games/<int:id>', views.get_player_games, name="getPlayerGames"),
+
 ]

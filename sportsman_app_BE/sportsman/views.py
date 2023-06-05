@@ -1,7 +1,9 @@
 import datetime
 import json
+from datetime import timedelta
 import firebase_admin
 from django.http import JsonResponse
+from django.utils import timezone
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import api_view
@@ -551,9 +553,7 @@ def update_player_photo(request, id):
         blob = bucket.blob(filename)
         blob.content_type = 'image/jpeg'
         blob.upload_from_file(uploaded_file)
-
         blob.make_public()
-
         image_url = blob.public_url
         user.picture = image_url
         user.save()
@@ -837,6 +837,97 @@ def change_sporthall_status(request):
     except:
         return JsonResponse({'data': {}}, status=400)
 
+@api_view(['POST'])
+def create_team(request):
+    name = request.data.get('name')
+    lead_id = request.data.get('id')
+    user = User.objects.get(id=lead_id)
+    team_lead = Team.objects.create(team_lead_id_id=lead_id)
+    PermanentTeams.objects.create(team_name=name, team_id_id=team_lead.id)
+    return JsonResponse({'success': True, 'message': 'Uspješno kreiran tim'}, status=201)
+
+
+@api_view(['GET'])
+def get_perm_teams(request):
+    id = request.GET.get('id')
+    list_of_teams = PermanentTeams.objects.filter(team_id__team_lead_id_id=id)
+    res = serializers.serialize('json', list_of_teams)
+    data = []
+
+    for team in serializers.deserialize('json', res):
+        queryset1 = TeamMembers.objects.filter(team_id_id=team.object.team_id_id)
+        res2 = serializers.serialize('json', queryset1)
+
+        if len(res2) != 0:
+            members = []
+
+            for member in serializers.deserialize('json', res2):
+                queryset2 = User.objects.filter(id=member.object.user_id_id)
+                res3 = serializers.serialize('json', queryset2)
+
+                members.append(res3)
+
+            data.append({
+                'id': team.object.team_id.id,
+                'name': team.object.team_name,
+                'members': members
+            })
+
+        else:
+            data.append({
+                'id': team.object.team_id.id,
+                'name': team.object.team_name,
+                'members': {}
+            })
+
+    return JsonResponse(data, safe=False)
+
+
+@api_view(['DELETE'])
+def delete_team(request):
+    team_id = request.GET.get('id')
+    team = PermanentTeams.objects.get(id=team_id)
+    team.delete()
+    return JsonResponse({'message': "Uspješno uklonjen tim.", 'data': {}}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+def invite_team_member(request):
+    lead_id = request.data.get('id')
+    name = request.data.get('username')
+    team_id = request.data.get('team_id')
+    user = User.objects.get(username=name)
+    current_time = timezone.localtime(timezone.now())
+    formatted_time = current_time.strftime('%Y-%m-%d %H:%M:%S')
+    formatted_time = (current_time + timedelta(hours=2)).strftime('%Y-%m-%d %H:%M:%S')
+    team_name = PermanentTeams.objects.get(id=team_id)
+    details_data = {
+        'team_id': team_id,
+        'team_name': team_name.team_name,
+    }
+    details_json = json.dumps(details_data)
+
+    Invitations.objects.create(recipient_id=user.id,sender_id=lead_id, time_sent=formatted_time,
+    status=0, details=details_json)
+    response_data = {
+        'message': 'Invitation sent successfully',
+        'memberName': name,
+
+    }
+
+    return JsonResponse(response_data)
+
+@api_view(['DELETE'])
+def delete_team_member(request):
+    email = request.GET.get('email')
+    user = User.objects.get(email=email)
+    user_id = user.id
+    team_id = request.GET.get('teamId')
+
+    team_member = TeamMembers.objects.get(user_id_id=user_id, team_id_id=team_id)
+    team_member.delete()
+
+    return JsonResponse({'message': "Uspješno uklonjen član tim.", 'data': {}}, status=status.HTTP_200_OK)
 
 @swagger_auto_schema(
     tags=['Authentication'],
@@ -1088,3 +1179,4 @@ def get_player_games(request, id):
         return JsonResponse(player_teams, safe=False, status=status.HTTP_200_OK)
     except:
         return JsonResponse({"message": "Korisnik nije pronadjen"}, status=status.HTTP_404_NOT_FOUND)
+
