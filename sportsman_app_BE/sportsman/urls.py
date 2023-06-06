@@ -40,6 +40,8 @@ urlpatterns = [
     path('player/friends/<int:id>', views.get_player_friends, name="getPlayerFriends"),
     path('player/delete-friend/<int:id>', views.delete_player_friend, name="deletePlayerFriend"),
     path('player/sort-invitations/<int:id>', views.sort_player_invitations, name="sortPlayerInvitations"),
+    path('player/sort-history/<int:id>', views.sort_player_history, name="sortPlayerHistory"),
+    path('player/sort-friends/<int:id>', views.sort_player_friends, name="sortPlayerFriends"),
     path('player/games/<int:id>', views.get_player_games, name="getPlayerGames"),
 
 ]

@@ -2,6 +2,7 @@ import datetime
 import json
 from datetime import timedelta
 import firebase_admin
+from django.db.models import F
 from django.http import JsonResponse
 from django.utils import timezone
 from drf_yasg import openapi
@@ -1051,7 +1052,7 @@ def contact_us(request):
 def get_player_invitations(request, id):
     try:
         invitations = list(Invitations.objects.filter(recipient_id=id)
-                       .values('id', 'sender__username', 'time_sent', 'status'))
+                       .values('id', 'sender__username', 'time_sent', 'status', 'details', 'type'))
         return JsonResponse(invitations, safe=False, status=status.HTTP_200_OK)
     except:
         return JsonResponse({"message": "Korisnik nije pronadjen"}, status=status.HTTP_404_NOT_FOUND)
@@ -1128,17 +1129,73 @@ def sort_player_invitations(request, id):
         invite_status = data.get('status')
         if sorting_order == 'asc':
             sorted_queryset = list(Invitations.objects.filter(recipient_id=id, status=invite_status)
-                               .values('id', 'sender__username', 'time_sent', 'status')
+                               .values('id', 'sender__username', 'time_sent', 'status', 'details', 'type')
                                .order_by(sorting_column))
         else:
             sorted_queryset = list(Invitations.objects.filter(recipient_id=id, status=invite_status)
-                               .values('id', 'sender__username', 'time_sent', 'status')
+                               .values('id', 'sender__username', 'time_sent', 'status', 'details', 'type')
                                .order_by('-' + sorting_column))
 
         return JsonResponse(sorted_queryset, safe=False, status=status.HTTP_200_OK)
     except:
         return JsonResponse({"message": "Korisnik nije pronađen"}, status=status.HTTP_404_NOT_FOUND)
 
+
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: "OK",
+        404: "User not found"
+    }
+)
+@api_view(['GET'])
+def sort_player_history(request, id):
+    try:
+        data = request.GET
+        sorting_column = data.get('column')
+        sorting_order = data.get('order')
+        player_teams = list(TeamMembers.objects.filter(user_id_id=id).values_list('team_id_id', flat=True))
+        if sorting_order == 'asc':
+            sorted_queryset = list(Games.objects.filter(team_id__in=player_teams)
+                                   .values('id', 'hall_name', 'status', 'time_appointed',
+                                           team_name=F('team_id__permanentteams__team_name'))
+                                   .order_by(sorting_column))
+        else:
+            sorted_queryset = list(Games.objects.filter(team_id__in=player_teams)
+                                   .values('id', 'hall_name', 'status', 'time_appointed',
+                                           team_name=F('team_id__permanentteams__team_name'))
+                                   .order_by('-' + sorting_column))
+
+        return JsonResponse(sorted_queryset, safe=False, status=status.HTTP_200_OK)
+    except:
+        return JsonResponse({"message": "Korisnik nije pronađen"}, status=status.HTTP_404_NOT_FOUND)
+
+
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: "OK",
+        404: "User not found"
+    }
+)
+@api_view(['GET'])
+def sort_player_friends(request, id):
+    try:
+        data = request.GET
+        sorting_column = data.get('column')
+        sorting_order = data.get('order')
+        if sorting_order == 'asc':
+            sorted_queryset = list(Friends.objects.filter(user1_id=id)
+                                   .values('id', 'user2__username')
+                                   .order_by(sorting_column))
+        else:
+            sorted_queryset = list(Friends.objects.filter(user1_id=id)
+                                   .values('id', 'user2__username')
+                                   .order_by('-' + sorting_column))
+
+        return JsonResponse(sorted_queryset, safe=False, status=status.HTTP_200_OK)
+    except:
+        return JsonResponse({"message": "Korisnik nije pronađen"}, status=status.HTTP_404_NOT_FOUND)
 
 @swagger_auto_schema(
     method='put',
@@ -1174,9 +1231,10 @@ def update_invitation_status(request, id):
 @api_view(['GET'])
 def get_player_games(request, id):
     try:
-        player_teams = list(TeamMembers.objects.filter(user_id_id=1))
-        print(player_teams)
-        return JsonResponse(player_teams, safe=False, status=status.HTTP_200_OK)
+        player_teams = list(TeamMembers.objects.filter(user_id_id=id).values_list('team_id_id', flat=True))
+        teams = list(Games.objects.filter(team_id__in=player_teams)
+                     .values('id', 'hall_name', 'status', 'time_appointed', team_name=F('team_id__permanentteams__team_name')))
+        return JsonResponse(teams, safe=False, status=status.HTTP_200_OK)
     except:
         return JsonResponse({"message": "Korisnik nije pronadjen"}, status=status.HTTP_404_NOT_FOUND)
 
