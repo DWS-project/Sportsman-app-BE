@@ -50,7 +50,8 @@ class Invitations(models.Model):
     type = models.CharField(max_length=20, default="Permanent Team")
 
     def __str__(self):
-        return "sender: " + str(self.sender) + " recipient:" + str(self.recipient) + "status"
+        return "sender: " + str(self.sender) + " recipient: " + str(self.recipient) + \
+            " status: " + str(self.status) + " time_sent: " + str(self.time_sent)
 
 
 class Team(models.Model):
