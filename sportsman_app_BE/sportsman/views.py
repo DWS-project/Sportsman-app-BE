@@ -335,6 +335,11 @@ def get_filtered_sport_halls(request):
         elif sort_price == 'Najskuplji':
             queryset = queryset.order_by('-price')
 
+    if date and time:
+        reservations = Reservations.objects.filter(date=date, time_from__lte=time, time_to__gte=time)
+        reserved_hall_ids = reservations.values_list('sport_hall_id', flat=True)
+        queryset = queryset.exclude(id__in=reserved_hall_ids)
+
     filtered_items = []
     for item in queryset:
         sports_string = item.sports
@@ -756,6 +761,26 @@ def get_sport_hall(request):
     obj = serializers.serialize('json', array_of_sporthalls)
     return JsonResponse({'data': json.loads(obj)}, status=status.HTTP_200_OK)
 
+@swagger_auto_schema(
+    tags=['Sport Hall'],
+    method='get',
+    manual_parameters=[
+        openapi.Parameter('sporthall_id', openapi.IN_QUERY,
+                          description='ID of the sport hall', type=openapi.TYPE_INTEGER),
+    ],
+    responses={
+            200: openapi.Response(description='Success', schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_BOOLEAN,
+                                             description='Indicates if the request was successful'),
+                    'data': openapi.Schema(type=openapi.TYPE_OBJECT, description='Object containing sport hall data')
+                }
+            )),
+            404: "Not Found",
+            500: "Internal Server Error"
+        }
+)
 @api_view(['GET'])
 def get_sport_hall_user(request):
     sporthall_id = request.GET.get('id')
@@ -766,6 +791,26 @@ def get_sport_hall_user(request):
     else:
         return JsonResponse({'status': False, 'data': {}}, status=status.HTTP_404_NOT_FOUND)
 
+@swagger_auto_schema(
+    tags=['Reservation'],
+    method='get',
+    manual_parameters=[
+        openapi.Parameter('sporthall_id', openapi.IN_QUERY,
+                          description='ID of the sport hall', type=openapi.TYPE_INTEGER),
+    ],
+    responses={
+            200: openapi.Response(description='Success', schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_BOOLEAN,
+                                             description='Indicates if the request was successful'),
+                    'data': openapi.Schema(type=openapi.TYPE_OBJECT,
+                                           description='Object containing all reservations for specific sport hall')
+                }
+            )),
+            500: "Internal Server Error"
+        }
+)
 @api_view(['GET'])
 def get_sport_hall_reservations(request):
     sporthall_id = request.GET.get('id')
@@ -775,6 +820,26 @@ def get_sport_hall_reservations(request):
     except Reservations.DoesNotExist:
         return JsonResponse({'status': False, 'data': {}})
 
+@swagger_auto_schema(
+    tags=['Player'],
+    method='get',
+    manual_parameters=[
+        openapi.Parameter('user_id', openapi.IN_QUERY,
+                          description='ID of the user', type=openapi.TYPE_INTEGER),
+    ],
+    responses={
+            200: openapi.Response(description='Success', schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_BOOLEAN,
+                                             description='Indicates if the request was successful'),
+                    'data': openapi.Schema(type=openapi.TYPE_OBJECT,
+                                           description='Object containing all friends of some player')
+                }
+            )),
+            500: "Internal Server Error"
+        }
+)
 @api_view(['GET'])
 def get_friends(request):
     user_id = request.GET.get('id')
@@ -983,6 +1048,55 @@ def contact_us(request):
     return JsonResponse(
         {'message': 'Poštovani, hvala vam što ste nas kontaktirali! Odgovorit ćemo vam u što skorijem roku.'}, status=status.HTTP_200_OK)
 
+@swagger_auto_schema(
+    tags=['Reservation'],
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'name': openapi.Schema(type=openapi.TYPE_STRING, description='Name'),
+            'surname': openapi.Schema(type=openapi.TYPE_STRING, description='Surname'),
+            'email': openapi.Schema(type=openapi.TYPE_STRING, description='Email'),
+            'phone': openapi.Schema(type=openapi.TYPE_STRING, description='Phone'),
+            'date': openapi.Schema(type=openapi.TYPE_STRING, description='Date'),
+            'from_time': openapi.Schema(type=openapi.TYPE_STRING, description='Time from'),
+            'to_time': openapi.Schema(type=openapi.TYPE_STRING, description='Time to'),
+            'user_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the player'),
+            'team_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the team'),
+            'reservation_type': openapi.Schema(type=openapi.TYPE_STRING, description='Type of reservation'),
+            'team_members': openapi.Schema(type=openapi.TYPE_STRING, description='Members of team'),
+            'sport_hall_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the sport hall'),
+        },
+        required=['name', 'surname', 'email', 'phone', 'date', 'from_time', 'to_time', 'user_id',
+                  'team_id', 'reservation_type', 'team_members', 'sport_hall_id'],
+        example={
+            'name': 'John Doe',
+            'email': 'johndoe@example.com',
+            'phone': '061123456',
+            'date': '2023-06-11',
+            'from_time': '10:00',
+            'to_time': '12:30',
+            'user_id': 1,
+            'team_id': 0,
+            'reservation_type': 'reservation',
+            'team_members': '',
+            'sport_hall_id': 2
+        }
+    ),
+    responses={
+        200: openapi.Response(description='Success', schema=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'status': openapi.Schema(type=openapi.TYPE_BOOLEAN,
+                                         description='Indicates if the request was successful'),
+                'data': openapi.Schema(type=openapi.TYPE_OBJECT,
+                                       description='Object containing all friends of some player')
+            }
+        )),
+        400: 'Bad Request',
+        500: 'Internal Server Error'
+    }
+)
 @api_view(['POST'])
 def reservation(request):
     try:
@@ -1022,14 +1136,56 @@ def reservation(request):
     except Exception as e:
         return JsonResponse({'status': False, 'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+@swagger_auto_schema(
+    tags=['Player'],
+    method='get',
+    manual_parameters=[
+        openapi.Parameter('user_id', openapi.IN_QUERY,
+                          description='ID of the user', type=openapi.TYPE_INTEGER),
+    ],
+    responses={
+            200: openapi.Response(description='Success', schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_BOOLEAN,
+                                             description='Indicates if the request was successful'),
+                    'data': openapi.Schema(type=openapi.TYPE_OBJECT,
+                                           description='Object containing all teams where specific user is team lead')
+                }
+            )),
+            500: "Internal Server Error"
+        }
+)
 @api_view(['GET'])
-def get_teams(request):
+def get_permanent_teams(request):
     user_id = request.GET.get('id')
     try:
         teams = list(PermanentTeams.objects.filter(team_id__team_lead_id_id=user_id).values())
         return JsonResponse({'status': True, 'data': teams}, status=status.HTTP_200_OK)
     except PermanentTeams.DoesNotExist:
         return JsonResponse({'status': False, 'data': {}})
+
+@swagger_auto_schema(
+    tags=['Player'],
+    method='get',
+    manual_parameters=[
+        openapi.Parameter('searchText', openapi.IN_QUERY,
+                          description='Text of the search', type=openapi.TYPE_STRING),
+    ],
+    responses={
+            200: openapi.Response(description='Success', schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_BOOLEAN,
+                                             description='Indicates if the request was successful'),
+                    'data': openapi.Schema(type=openapi.TYPE_OBJECT,
+                                           description='Object containing all players whose '
+                                                       'usernames contain provided text')
+                }
+            )),
+            500: "Internal Server Error"
+        }
+)
 
 @api_view(['GET'])
 def get_users(request):
@@ -1039,6 +1195,33 @@ def get_users(request):
         return JsonResponse({'status': True, 'data': users}, status=status.HTTP_200_OK)
     except PermanentTeams.DoesNotExist:
         return JsonResponse({'status': False, 'data': {}})
+
+@swagger_auto_schema(
+    tags=['Invitation'],
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'sender_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='Name'),
+            'recipient_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='Surname'),
+            'sport_hall_id': openapi.Schema(type=openapi.TYPE_STRING, description='Email'),
+            'sport_hall_title': openapi.Schema(type=openapi.TYPE_STRING, description='Phone'),
+        },
+        required=['sender_id', 'recipient_id', 'sport_hall_id', 'sport_hall_title', 'date'],
+    ),
+    responses={
+        200: openapi.Response(description='Success', schema=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'status': openapi.Schema(type=openapi.TYPE_BOOLEAN,
+                                         description='Indicates if the request was successful'),
+                'data': openapi.Schema(type=openapi.TYPE_OBJECT,
+                                       description='Object containing created invitation')
+            }
+        )),
+        500: 'Internal Server Error'
+    }
+)
 
 @api_view(['POST'])
 def invite_temporary_team(request):
@@ -1073,20 +1256,61 @@ def invite_temporary_team(request):
 
     return JsonResponse({'status': True, 'data': deserialized_invite})
 
+
+@swagger_auto_schema(
+    tags=['Invitation'],
+    method='delete',
+    manual_parameters=[
+        openapi.Parameter('invite_id', openapi.IN_QUERY,
+                          description='ID of the invitation', type=openapi.TYPE_INTEGER),
+    ],
+    responses={
+            200: openapi.Response(description='Success', schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_BOOLEAN,
+                                             description='Indicates if the request was successful'),
+                }
+            )),
+            500: "Internal Server Error"
+        }
+)
+
 @api_view(['DELETE'])
 def remove_invite_temporary_team(request):
-    invite_id = request.GET.get('id')
+    invite_id = request.data.get('id')
+    print(invite_id)
     invite = Invitations.objects.get(id=invite_id)
     invite.delete()
     return JsonResponse({'status': True}, status=status.HTTP_200_OK)
 
+@swagger_auto_schema(
+    tags=['Player'],
+    method='get',
+    manual_parameters=[
+        openapi.Parameter('recipients_ids', openapi.IN_QUERY,
+                          description='IDs of invited players', type=openapi.TYPE_STRING),
+    ],
+    responses={
+            200: openapi.Response(description='Success', schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'status': openapi.Schema(type=openapi.TYPE_BOOLEAN,
+                                             description='Indicates if the request was successful'),
+                    'data': openapi.Schema(type=openapi.TYPE_OBJECT,
+                                             description='Object containing invited players')
+                }
+            )),
+            500: "Internal Server Error"
+        }
+)
 @api_view(['GET'])
-def get_user(request):
-    invitation_id = request.GET.get('invitationId')
+def get_invited_users(request):
+    recipients_ids = request.GET.get('recipientsIds')
+    recipients_ids = recipients_ids.split(',') if recipients_ids else []
     try:
-        invitation = Invitations.objects.get(id=invitation_id)
-        user_id = invitation.recipient_id
-        user = list(User.objects.filter(id=user_id).values())
-        return JsonResponse({'status': True, 'data': user}, status=status.HTTP_200_OK)
-    except Invitations.DoesNotExist:
+        recipients = User.objects.filter(id__in=recipients_ids).values()
+        recipients = list(recipients)
+        return JsonResponse({'status': True, 'data': recipients}, status=status.HTTP_200_OK)
+    except User.DoesNotExist:
         return JsonResponse({'status': False, 'data': {}})
