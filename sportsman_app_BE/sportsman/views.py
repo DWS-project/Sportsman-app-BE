@@ -190,7 +190,6 @@ def login(request):
         user = User.objects.get(email=email)
         is_password_valid = check_password(password, user.password)
         if is_password_valid:
-            print('hh')
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh)
             user.access_token = access_token
@@ -1311,35 +1310,6 @@ def delete_player_friend(request, id):
     except Friends.DoesNotExist:
         return JsonResponse({'status': False, 'message': 'Korisnik nije pronađen'}, status=status.HTTP_404_NOT_FOUND)
 
-
-#
-# @swagger_auto_schema(
-#     method='get',
-#     responses={
-#         200: "OK",
-#         404: "User not found"
-#     }
-# )
-# @api_view(['GET'])
-# def sort_player_invitations(request, id):
-#     try:
-#         data = request.GET
-#         sorting_column = data.get('column')
-#         sorting_order = data.get('order')
-#         invite_status = data.get('status')
-#         if sorting_order == 'asc':
-#             sorted_queryset = list(Invitations.objects.filter(recipient_id=id, status=invite_status)
-#                                    .values('id', 'sender__username', 'time_sent', 'status', 'details', 'type')
-#                                    .order_by(sorting_column))
-#         else:
-#             sorted_queryset = list(Invitations.objects.filter(recipient_id=id, status=invite_status)
-#                                    .values('id', 'sender__username', 'time_sent', 'status', 'details', 'type')
-#                                    .order_by('-' + sorting_column))
-#
-#         return JsonResponse(sorted_queryset, safe=False, status=status.HTTP_200_OK)
-#     except:
-#         return JsonResponse({"message": "Korisnik nije pronađen"}, status=status.HTTP_404_NOT_FOUND)
-#
 
 @swagger_auto_schema(
     method='get',
