@@ -1,6 +1,6 @@
 import json
 from datetime import timedelta
-#import firebase_admin
+import firebase_admin
 from django.db.models import F
 from django.http import JsonResponse
 from django.utils import timezone
@@ -37,7 +37,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import status
 from rest_framework.response import Response
 from django.core.mail import send_mail
-#from firebase_admin import storage
+from firebase_admin import storage
 from django.core import serializers
 
 
@@ -552,7 +552,7 @@ def update_player_photo(request, id):
     uploaded_file = request.FILES.get('photo')
     user = User.objects.get(id=id)
     if uploaded_file:
-        bucket = ''#storage.bucket()
+        bucket = storage.bucket()
         filename = uploaded_file.name
         blob = bucket.blob(filename)
         blob.content_type = 'image/jpeg'
@@ -818,7 +818,7 @@ def get_sport_hall_reservations(request):
         reservations = list(Reservations.objects.filter(sport_hall_id_id=sporthall_id).values())
         return JsonResponse({'status': True, 'data': reservations}, status=status.HTTP_200_OK)
     except Reservations.DoesNotExist:
-        return JsonResponse({'status': False, 'data': {}})
+        return JsonResponse({'status': False, 'data': {}}, status=status.HTTP_404_NOT_FOUND)
 
 @swagger_auto_schema(
     tags=['Player'],
@@ -856,7 +856,7 @@ def get_friends(request):
     if friend_ids:
         return JsonResponse({'status': True, 'data': friends_data_list}, status=status.HTTP_200_OK)
     else:
-        return JsonResponse({'status': False, 'data': {}})
+        return JsonResponse({'status': False, 'data': {}}, status=status.HTTP_404_NOT_FOUND)
 
 @swagger_auto_schema(
     tags=['Sport Hall'],
@@ -1254,10 +1254,8 @@ def reservation(request):
             return JsonResponse({'status': True}, status=status.HTTP_200_OK)
         else:
             return JsonResponse({'status': False, 'message': 'Failed to create reservation.'},
-                                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    except ValueError as ve:
-        return JsonResponse({'status': False, 'message': str(ve)}, status=status.HTTP_400_BAD_REQUEST)
-    except Exception as e:
+                                status=status.HTTP_400_BAD_REQUEST)
+    except (ValueError, Exception) as e:
         return JsonResponse({'status': False, 'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 @swagger_auto_schema(
@@ -1378,7 +1376,7 @@ def invite_temporary_team(request):
     invite_json = json.dumps(invite_data)
     deserialized_invite = json.loads(invite_json)
 
-    return JsonResponse({'status': True, 'data': deserialized_invite})
+    return JsonResponse({'status': True, 'data': deserialized_invite}, status=status.HTTP_200_OK)
 
 
 @swagger_auto_schema(
@@ -1437,7 +1435,7 @@ def get_invited_users(request):
         recipients = list(recipients)
         return JsonResponse({'status': True, 'data': recipients}, status=status.HTTP_200_OK)
     except User.DoesNotExist:
-        return JsonResponse({'status': False, 'data': {}})
+        return JsonResponse({'status': False, 'data': {}}, status=status.HTTP_404_NOT_FOUND)
 @api_view(['DELETE'])
 def delete_player_friend(request, id):
     try:
