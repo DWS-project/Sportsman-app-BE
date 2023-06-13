@@ -1,7 +1,7 @@
 import datetime
 import json
 from datetime import timedelta
-import firebase_admin
+#import firebase_admin
 from django.db.models import F
 from django.http import JsonResponse
 from django.utils import timezone
@@ -38,7 +38,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import status
 from rest_framework.response import Response
 from django.core.mail import send_mail
-from firebase_admin import storage
+#from firebase_admin import storage
 from django.core import serializers
 
 
@@ -549,7 +549,7 @@ def update_player_photo(request, id):
     uploaded_file = request.FILES.get('photo')
     user = User.objects.get(id=id)
     if uploaded_file:
-        bucket = storage.bucket()
+        bucket = ''#storage.bucket()
         filename = uploaded_file.name
         blob = bucket.blob(filename)
         blob.content_type = 'image/jpeg'
