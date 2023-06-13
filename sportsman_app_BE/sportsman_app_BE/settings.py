@@ -19,8 +19,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 cred = credentials.Certificate("../cloud_key.json")
-# TODO: Ko je dodao ovo da provjeri sta se desava, ne moze se app pokrenuti ako odkomentarisemo ovu liniju
-# app = firebase_admin.initialize_app(cred, {'storageBucket': 'sportsmanappcloud.appspot.com'})
+app = firebase_admin.initialize_app(cred, {'storageBucket': 'sportsmanappcloud.appspot.com'})
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent

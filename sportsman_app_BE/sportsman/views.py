@@ -207,10 +207,10 @@ def login(request):
 
             return response
         else:
-            return JsonResponse({"message": "Invalid username or password!!",
+            return JsonResponse({"message": "Pogrešan username ili password!!",
                                  "data": {},
                                  }, status=status.HTTP_400_BAD_REQUEST)
-    return JsonResponse({"message": "Invalid username or password!!",
+    return JsonResponse({"message": "Pogrešan username ili password!!",
                          "data": {},
                          }, status=status.HTTP_400_BAD_REQUEST)
 
@@ -495,7 +495,7 @@ def update_player_data(request, id):
         user.city = data.get('city')
         user.age = data.get('age')
         user.save()
-        return JsonResponse({'status': True, 'message': 'Podatci uspješno promijenjeni'}, status=status.HTTP_200_OK)
+        return JsonResponse({'status': True, 'message': 'Podaci uspješno promijenjeni'}, status=status.HTTP_200_OK)
     except:
         return JsonResponse({'status': False, 'message': 'Korisnik nije pronađen'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -636,7 +636,7 @@ def update_owner_data(request, id):
         owner.capacity = data.get('capacity')
         owner.type = data.get('type')
         owner.save()
-        return JsonResponse({'status': True, 'message': 'Podatci uspješno promijenjeni'}, status=status.HTTP_200_OK)
+        return JsonResponse({'status': True, 'message': 'Podaci uspješno promijenjeni'}, status=status.HTTP_200_OK)
     except:
         return JsonResponse({'status': False, 'message': 'Korisnik nije pronađen'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -814,7 +814,7 @@ def change_sport_hall_status(request):
         obj = serializers.serialize('json', [sport_hall])  # Serialize as a list
         return JsonResponse({'data': json.loads(obj)}, status=200)
     except ObjectDoesNotExist:
-        return JsonResponse({'error': 'SportHall not found'}, status=404)
+        return JsonResponse({'error': 'Sportski teren ne postoji'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
 
@@ -859,7 +859,7 @@ def create_team(request):
     except IntegrityError as e:
         return JsonResponse({'error': 'Kreiranje tima nije uspjelo', 'details': str(e)}, status=400)
     except Exception as e:
-        return JsonResponse({'error': 'Greska prilikom kreiranja tima', 'details': str(e)}, status=400)
+        return JsonResponse({'error': 'Greška prilikom kreiranja tima', 'details': str(e)}, status=400)
 
 
 @swagger_auto_schema(
@@ -1064,7 +1064,7 @@ def delete_team_member(request):
             team_member.delete()
             return JsonResponse({'message': "Uspješno uklonjen član tima.", 'data': {}}, status=status.HTTP_200_OK)
         except TeamMembers.DoesNotExist:
-            return JsonResponse({'error': 'Ne postoji taj clan u timu.'}, status=status.HTTP_404_NOT_FOUND)
+            return JsonResponse({'error': 'Ne postoji taj član u timu.'}, status=status.HTTP_404_NOT_FOUND)
     except User.DoesNotExist:
         return JsonResponse({'error': 'Korisnik ne postoji.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -1098,13 +1098,13 @@ def confirm_email(request):
 
         user.save()
         return JsonResponse(
-            {'message': 'Email uspjesno potvrdjen'},
+            {'message': 'Email uspjesno potvrđen'},
             status=status.HTTP_201_CREATED)
 
     except jwt.ExpiredSignatureError:
         return JsonResponse({'message': 'Token istekao'}, status=status.HTTP_410_GONE)
     except jwt.InvalidTokenError:
-        return JsonResponse({'message': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+        return JsonResponse({'message': 'Token nije validan'}, status=status.HTTP_400_BAD_REQUEST)
     except User.DoesNotExist:
         return JsonResponse({'message': 'Korisnik ne postoji'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -1134,14 +1134,14 @@ def resend_confirmation_email(request):
         user = User.objects.get(email=email)
 
         if user.email_confirmed:
-            return JsonResponse({'message': 'Email vec potvrdjen'}, status=status.HTTP_400_BAD_REQUEST)
+            return JsonResponse({'message': 'Email već potvrđen'}, status=status.HTTP_400_BAD_REQUEST)
 
         token = send_confirmation_email(email)
         user.token = token
 
         user.save()
 
-        return Response({'message': 'Email uspjesno potvrdjen'})
+        return Response({'message': 'Email uspješno potvrđen'})
     except User.DoesNotExist:
         return Response({'message': 'Korisnik ne postoji'})
 
@@ -1256,7 +1256,7 @@ def get_player_invitations(request):
 
         return JsonResponse(sorted_queryset, safe=False, status=status.HTTP_200_OK)
     except Invitations.DoesNotExist:
-        return JsonResponse({"message": "Player invitations not found."}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({"message": "Pozivnica ne postoji."}, status=status.HTTP_404_NOT_FOUND)
 
 
 @swagger_auto_schema(
@@ -1273,7 +1273,7 @@ def get_player_friends(request, id):
         friends = list(Friends.objects.filter(user1_id=id).values('id', 'user2__username'))
         return JsonResponse(friends, safe=False, status=status.HTTP_200_OK)
     except Friends.DoesNotExist:
-        return JsonResponse({"message": "Player's friends not found."}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({"message": "Prijatelj nije pronađen."}, status=status.HTTP_404_NOT_FOUND)
 
 
 @swagger_auto_schema(
@@ -1306,7 +1306,7 @@ def delete_player_friend(request, id):
     try:
         friend = Friends.objects.get(id=id)
         friend.delete()
-        return JsonResponse({'message': "Korisnik uspjesno obrisan iz prijatelja"}, status=status.HTTP_200_OK)
+        return JsonResponse({'message': "Korisnik uspješno obrisan iz prijatelja"}, status=status.HTTP_200_OK)
     except Friends.DoesNotExist:
         return JsonResponse({'status': False, 'message': 'Korisnik nije pronađen'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -1418,6 +1418,6 @@ def get_player_games(request, user_id):
                              team_name=F('team_id__permanentteams__team_name')))
         return JsonResponse({'teams': teams}, status=status.HTTP_200_OK)
     except TeamMembers.DoesNotExist:
-        return JsonResponse({"message": "Korisnik nije pronadjen"}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({"message": "Korisnik nije pronađen"}, status=status.HTTP_404_NOT_FOUND)
     except Games.DoesNotExist:
-        return JsonResponse({"message": "Games nije pronadjen"}, status=status.HTTP_404_NOT_FOUND)
+        return JsonResponse({"message": "Igra nije pronađena"}, status=status.HTTP_404_NOT_FOUND)
