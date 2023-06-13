@@ -11,9 +11,17 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 from datetime import timedelta
 from pathlib import Path
+import firebase_admin
+from firebase_admin import credentials
+
 from dotenv import load_dotenv
 
 load_dotenv()
+
+cred = credentials.Certificate("../cloud_key.json")
+# TODO: Ko je dodao ovo da provjeri sta se desava, ne moze se app pokrenuti ako odkomentarisemo ovu liniju
+# app = firebase_admin.initialize_app(cred, {'storageBucket': 'sportsmanappcloud.appspot.com'})
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -32,13 +40,13 @@ CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
 APPEND_SLASH = False
 
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_HOST_USER = 'sportsmandev520@gmail.com'
 EMAIL_HOST_PASSWORD = 'juqvxmyyllnjkazw'  #'sportsmandev!.'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -130,7 +138,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Zagreb'
 
 USE_I18N = True
 
