@@ -14,7 +14,6 @@ from firebase_admin import storage
 from rest_framework.decorators import api_view
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.mail import EmailMessage
-from django.conf import settings
 from .helpers import send_confirmation_email
 from .models import *
 from django.utils.crypto import get_random_string
@@ -23,7 +22,6 @@ from rest_framework import status
 from rest_framework.response import Response
 from django.core.mail import send_mail
 from django.core import serializers
-
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -1089,25 +1087,30 @@ def delete_team_member(request):
 )
 @api_view(['POST'])
 def confirm_email(request):
+    email = None
+
     try:
         token = request.GET.get('token')
-        decoded_token = jwt.decode(token, settings.SECRET_KEY)
-        user = User.objects.get(email=decoded_token['email'])
-        user.email_confirmed = True
-        user.confirmation_token = None
+        decoded_token = jwt.decode(token, environ.get('SECRET_KEY'), algorithms=['HS256'])
+        email = decoded_token['email']
+        user_email = User.objects.get(email=email)
 
-        user.save()
-        return JsonResponse(
-            {'message': 'Email uspjesno potvrđen'},
-            status=status.HTTP_201_CREATED)
+        if user_email:
+            user = User.objects.get(confirmation_token=token, email=email)
 
+            user.email_confirmed = True
+            user.confirmation_token = None
+            user.save()
+
+            return JsonResponse({'message': 'Email uspješno potvrđen'}, status=status.HTTP_201_CREATED)
     except jwt.ExpiredSignatureError:
-        return JsonResponse({'message': 'Token istekao'}, status=status.HTTP_410_GONE)
+        return JsonResponse({'message': 'Token istekao', 'email': email}, status=status.HTTP_410_GONE)
     except jwt.InvalidTokenError:
-        return JsonResponse({'message': 'Token nije validan'}, status=status.HTTP_400_BAD_REQUEST)
+        return JsonResponse({'message': 'Token nije validan', 'email': None}, status=status.HTTP_400_BAD_REQUEST)
     except User.DoesNotExist:
-        return JsonResponse({'message': 'Korisnik ne postoji'}, status=status.HTTP_404_NOT_FOUND)
-
+        return JsonResponse({'message': 'Korisnik ne postoji', 'email': None}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return JsonResponse({'message': 'Nešto je pošlo po zlu', 'email': None}, status=status.HTTP_400_BAD_REQUEST)
 
 @swagger_auto_schema(
     tags=['Authentication'],
@@ -1130,7 +1133,7 @@ def confirm_email(request):
 @api_view(['POST'])
 def resend_confirmation_email(request):
     try:
-        email = request.GET.get('email')
+        email = request.data.get('email')
         user = User.objects.get(email=email)
 
         if user.email_confirmed:
@@ -1140,10 +1143,9 @@ def resend_confirmation_email(request):
         user.token = token
 
         user.save()
-
-        return Response({'message': 'Email uspješno potvrđen'})
+        return JsonResponse({'message': 'Email uspješno poslan, provjerite svoju poštu'}, status=status.HTTP_200_OK)
     except User.DoesNotExist:
-        return Response({'message': 'Korisnik ne postoji'})
+        return JsonResponse({'message': 'Korisnik ne postoji'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @swagger_auto_schema(
@@ -1190,10 +1192,10 @@ def contact_us(request):
     user_email = EmailMessage(
         user_email_subject,
         user_email_body,
-        settings.DEFAULT_FROM_EMAIL,
+        load_dotenv("DEFAULT_FROM_EMAIL"),
         [email],
         headers={'From': 'Sportsman <{sportsmanMail}>'.format(
-            sportsmanMail=settings.DEFAULT_FROM_EMAIL)}
+            sportsmanMail= load_dotenv("DEFAULT_FROM_EMAIL"),)}
     )
 
     user_email.content_subtype = "html"
@@ -1207,10 +1209,10 @@ def contact_us(request):
     email = EmailMessage(
         email_subject,
         email_body,
-        settings.DEFAULT_FROM_EMAIL,
+        load_dotenv("DEFAULT_FROM_EMAIL"),
         [email],
         headers={'From': email, 'To': 'Sportsman <{sportsmanMail}>'.format(
-            sportsmanMail=settings.DEFAULT_FROM_EMAIL)}
+            sportsmanMail = load_dotenv("DEFAULT_FROM_EMAIL"))}
     )
 
     email.content_subtype = "html"
