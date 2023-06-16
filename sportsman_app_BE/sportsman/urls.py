@@ -35,7 +35,7 @@ urlpatterns = [
 
     path('player/all', views.get_all_players, name='getAllUsers'),
     path('player/<int:id>', views.get_player_data, name="getPlayerData"),
-    path('player/update/<int:id>', views.update_player_data, name="updatePlayerData"),
+    path('player/update', views.update_player_data, name="updatePlayerData"),
     path('player/change-profile-photo/<int:id>/', views.update_player_photo, name="updateUserPhoto"),
 
     path('contact-us', views.contact_us, name='contactUs'),

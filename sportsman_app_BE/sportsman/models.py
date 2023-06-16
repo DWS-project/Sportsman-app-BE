@@ -111,10 +111,10 @@ class SportHall(models.Model):
     type = models.CharField(max_length=20, null=True)
     pictures = models.TextField(null=True)
     capacity = models.IntegerField(null=True)
-    # owner = models.ForeignKey(Owner, on_delete=models.CASCADE)
+    owner = models.ForeignKey(Owner, on_delete=models.CASCADE)
 
     def __str__(self):
-        return "title: " + str(self.title) + " owner: " + str(self.owner_id)
+        return "title: " + str(self.title)
 
 
 class Owner_SportHall(models.Model):
