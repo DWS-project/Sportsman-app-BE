@@ -1,35 +1,19 @@
-import datetime
-import json
-from datetime import timedelta
-import firebase_admin
-from django.db.models import F
-from django.http import JsonResponse
-from django.utils import timezone
-from drf_yasg import openapi
-from drf_yasg.utils import swagger_auto_schema
-from rest_framework.decorators import api_view
-from django.core.exceptions import ObjectDoesNotExist
-import json
+from datetime import timedelta, timezone
 from os import environ
+import json
+from sqlite3 import IntegrityError
+
 import jwt
-from django.conf import settings
-
-
+from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import F
 from django.forms import model_to_dict
 from django.http import JsonResponse
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
+from firebase_admin import storage
 from rest_framework.decorators import api_view
-from django.contrib.auth.hashers import make_password
-from django.contrib.auth.hashers import check_password
-import json
-
-from rest_framework.response import Response
-
-from django.core.mail import EmailMessage
-
 from django.contrib.auth.hashers import make_password, check_password
-
+from django.core.mail import EmailMessage
 from django.conf import settings
 from .helpers import send_confirmation_email
 from .models import *
@@ -38,8 +22,11 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import status
 from rest_framework.response import Response
 from django.core.mail import send_mail
-from firebase_admin import storage
 from django.core import serializers
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 # Create your views here.
@@ -103,7 +90,8 @@ def registration_player(request):
             'interests': interests,
             'password': make_password(password),
             'confirmation_token': token,
-            'email_confirmed': False
+            'email_confirmed': False,
+            'user_type': UserType.objects.get(pk=1)
         })
 
     return JsonResponse({'status': True, 'message': "Uspješno ste se registrovali."},
@@ -126,8 +114,7 @@ def registration_player(request):
             'city': openapi.Schema(type=openapi.TYPE_STRING, description='The city field'),
             'capacity': openapi.Schema(type=openapi.TYPE_INTEGER, description='The capacity field'),
             'street': openapi.Schema(type=openapi.TYPE_STRING, description='The street field'),
-            'streetNumber': openapi.Schema(type=openapi.TYPE_STRING, description='The street number field'),
-            'type': openapi.Schema(type=openapi.TYPE_STRING, description='The type field'),
+            'streetNumber': openapi.Schema(type=openapi.TYPE_STRING, description='The street number field')
         },
         required=['name', 'surname', 'username', 'email', 'tel_number', 'password', 'repeatedPassword', 'city',
                   'capacity', 'street', 'streetNumber', 'type']
@@ -147,10 +134,9 @@ def registration_owner(request):
     capacity = data.get('capacity')
     street = data.get('street')
     street_number = data.get('streetNumber')
-    type_of_user = data.get('type')
     location = json.dumps(
         {"city": city, "street": street, "streetNumber": street_number})
-    owner = Owner.objects.filter(email=email)
+    owner = User.objects.filter(email=email)
 
     if password != repeated_password:
         return JsonResponse({'status': False, 'message': "Lozinke se ne podudaraju"},
@@ -166,12 +152,12 @@ def registration_owner(request):
             'surname': surname, 'username': username,
             'email': email,
             "tel_number": tel_number,
-            'location': location,
-            'capacity': capacity,
-            'type': type_of_user,
             'password': make_password(password),
             'confirmation_token': token,
-            'email_confirmed': False
+            'email_confirmed': False,
+            'user_type': UserType.objects.get(pk=2),
+            'location': location,
+            'capacity': capacity
         })
 
         return JsonResponse({'status': True, 'message': "Uspješno ste se registrovali."},
@@ -200,16 +186,14 @@ def login(request):
     email = data.get('email', None)
     password = data.get('password', None)
 
-    if (User.objects.filter(email=email).exists() == True):
+    if User.objects.filter(email=email).exists():
         user = User.objects.get(email=email)
         is_password_valid = check_password(password, user.password)
         if is_password_valid:
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh)
             user.access_token = access_token
-            user_picture = None
-            if user.picture:
-                user_picture = user.picture
+
             response.set_cookie(
                 "Authentication", access_token, 86400, httponly=True)
 
@@ -217,39 +201,16 @@ def login(request):
                                       "email": user.email, "username": user.username,
                                       "tel_number": user.tel_number, "age": user.age, "city": user.city,
                                       "interests": user.interests,
-                                      "name": user.name, "surname": user.surname}}
+                                      "name": user.name, "surname": user.surname, "user_type": user.user_type.id,
+                                      "picture": user.picture}}
             response.message = "Login successfully"
 
             return response
         else:
-            return Response({"message": "Invalid username or password!!",
-                             "data": {},
-                             }, status=status.HTTP_400_BAD_REQUEST)
-
-    elif (Owner.objects.filter(email=email).exists() == True):
-        owner = Owner.objects.get(email=email)
-        is_password_valid = check_password(password, owner.password)
-
-        if is_password_valid:
-            refresh = RefreshToken.for_user(owner)
-            access_token = str(refresh)
-            owner.access_token = access_token
-            owner_picture = None
-            if owner.picture:
-                user_picture = owner.picture
-            response.set_cookie(
-                "Authentication", access_token, 86400, httponly=True)
-
-            response.data = {"owner": {"id": owner.id,
-                                       "email": owner.email, "username": owner.username,
-                                       "tel_number": owner.tel_number, "location": owner.location,
-                                       "capacity": owner.capacity, "name": owner.name, "surname": owner.surname,
-                                       "picture": owner_picture}}
-            response.message = "Login successfully"
-
-            return response
-    else:
-        return Response({"message": "Invalid username or password!!",
+            return JsonResponse({"message": "Pogrešan username ili password!!",
+                                 "data": {},
+                                 }, status=status.HTTP_400_BAD_REQUEST)
+    return JsonResponse({"message": "Pogrešan username ili password!!",
                          "data": {},
                          }, status=status.HTTP_400_BAD_REQUEST)
 
@@ -263,16 +224,13 @@ def login(request):
 )
 @api_view(['POST'])
 def logout(request):
-    response = Response()
-
     if request.user.is_authenticated:
         request.user.access_token = None
         request.user.save()
 
+    response = Response({"message": "Logged out successfully.", "data": {}})
     response.delete_cookie("Authentication")
-    return Response({"message": "Logged out successfully.",
-                     "data": {},
-                     }, status=status.HTTP_200_OK)
+    return response
 
 
 @swagger_auto_schema(
@@ -304,7 +262,7 @@ def get_filtered_sport_halls(request):
     price = request.GET.get('price')
     city = request.GET.get('city')
     sports = request.GET.getlist('sports[]')
-    type = request.GET.getlist('type[]')
+    sport_halls_type = request.GET.getlist('type[]')
     date = request.GET.get('date')
     time = request.GET.get('time')
     search_text = request.GET.get('searchText')
@@ -316,8 +274,8 @@ def get_filtered_sport_halls(request):
     if city:
         queryset = queryset.filter(city=city)
 
-    if type:
-        queryset = queryset.filter(type__in=type)
+    if sport_halls_type:
+        queryset = queryset.filter(type__in=sport_halls_type)
 
     if price:
         queryset = queryset.filter(price__lte=price)
@@ -326,15 +284,15 @@ def get_filtered_sport_halls(request):
         queryset = queryset.filter(title__icontains=search_text)
 
     if sort_type:
-        if sort_type == 'Unutrašnji':
+        if sort_type == 1:
             queryset = queryset.order_by('type')
-        elif sort_type == 'Vanjski':
+        elif sort_type == 2:
             queryset = queryset.order_by('-type')
 
     if sort_price:
-        if sort_price == 'Najjeftiniji':
+        if sort_price == 1:
             queryset = queryset.order_by('price')
-        elif sort_price == 'Najskuplji':
+        elif sort_price == 2:
             queryset = queryset.order_by('-price')
 
     filtered_items = []
@@ -365,11 +323,11 @@ def get_filtered_sport_halls(request):
 @api_view(['PUT'])
 def forgot_password(request):
     email = request.data.get('email')
-    if User.objects.filter(email=email).exists() == False & Owner.objects.filter(email=email).exists() == False:
+    if User.objects.filter(email=email).exists() is False:
         return JsonResponse({'status': False, 'message': 'Korisnik sa unesenim emailom nije registrovan'},
                             status=status.HTTP_404_NOT_FOUND)
     else:
-        if User.objects.filter(email=email).exists() == True:
+        if User.objects.filter(email=email).exists():
             password = get_random_string(8)
             user = User.objects.get(email=email)
             user.password = make_password(password)
@@ -377,20 +335,7 @@ def forgot_password(request):
             send_mail(
                 'PROMJENA LOZINKE',
                 'Vaša nova lozinka je ' + password,
-                'redroseb1206@gmail.com',
-                [email],
-                fail_silently=False)
-            return JsonResponse({'status': True, 'message': 'Nova lozinka Vam je poslana na ' + email},
-                                status=status.HTTP_200_OK)
-        elif (Owner.objects.filter(email=email).exists() == True):
-            password = get_random_string(8)
-            owner = Owner.objects.get(email=email)
-            owner.password = make_password(password)
-            owner.save()
-            send_mail(
-                'PROMJENA LOZINKE',
-                'Vaša nova lozinka je ' + password,
-                'redroseb1206@gmail.com',
+                environ.get('DEFAULT_FROM_EMAIL'),
                 [email],
                 fail_silently=False)
             return JsonResponse({'status': True, 'message': 'Nova lozinka Vam je poslana na ' + email},
@@ -406,7 +351,7 @@ def forgot_password(request):
 )
 @api_view(['GET'])
 def get_all_players(request):
-    users = list(User.objects.values(
+    users = list(User.objects.filter(owner__isnull=True).values(
         'id', 'name', 'surname', 'username', 'city', 'age', 'interests', 'picture'))
     return JsonResponse(users, safe=False, status=status.HTTP_200_OK)
 
@@ -420,7 +365,7 @@ def get_all_players(request):
 )
 @api_view(['GET'])
 def get_all_owners(request):
-    owners = list(Owner.objects.values(
+    owners = list(User.objects.filter(owner__isnull=False).values(
         'id', 'name', 'surname', 'location', 'username', 'capacity', 'picture', 'tel_number'))
     return JsonResponse(owners, safe=False, status=status.HTTP_200_OK)
 
@@ -428,18 +373,81 @@ def get_all_owners(request):
 @swagger_auto_schema(
     tags=['Sport Hall'],
     method='get',
-    responses={
-        200: "OK",
-    }
+    manual_parameters=[
+        openapi.Parameter('price', openapi.IN_QUERY,
+                          description='The price field', type=openapi.TYPE_STRING),
+        openapi.Parameter('city', openapi.IN_QUERY,
+                          description='The city field', type=openapi.TYPE_STRING),
+        openapi.Parameter('date', openapi.IN_QUERY,
+                          description='The date field', type=openapi.TYPE_STRING),
+        openapi.Parameter('time', openapi.IN_QUERY,
+                          description='The time field', type=openapi.TYPE_STRING),
+        openapi.Parameter('text', openapi.IN_QUERY,
+                          description='The searchbar text field', type=openapi.TYPE_STRING),
+        openapi.Parameter('sort_type', openapi.IN_QUERY,
+                          description='The type sorting field', type=openapi.TYPE_STRING),
+        openapi.Parameter('sort_price', openapi.IN_QUERY,
+                          description='The price sorting field', type=openapi.TYPE_STRING),
+        openapi.Parameter('sports', openapi.IN_QUERY,
+                          description='The sports field', type=openapi.TYPE_STRING),
+        openapi.Parameter('type', openapi.IN_QUERY,
+                          description='The type field', type=openapi.TYPE_INTEGER),
+    ]
 )
 @api_view(['GET'])
 def get_all_sport_halls(request):
-    sport_halls = list(SportHall.objects.values(
-        'title', 'city', 'address', 'description', 'status', 'price', 'pictures', 'owner_id', 'id'))
-    return JsonResponse(sport_halls, safe=False, status=status.HTTP_200_OK)
+    price = request.GET.get('price')
+    city = request.GET.get('city')
+    sports = request.GET.getlist('sports[]')
+    sport_halls_type = request.GET.getlist('type[]')
+    date = request.GET.get('date')
+    time = request.GET.get('time')
+    search_text = request.GET.get('searchText')
+    sort_type = request.GET.get('sort_type')
+    sort_price = request.GET.get('sort_price')
+
+    queryset = SportHall.objects.all()
+
+    if city:
+        queryset = queryset.filter(city=city)
+
+    if sport_halls_type:
+        queryset = queryset.filter(type__in=sport_halls_type)
+
+    if price:
+        queryset = queryset.filter(price__lte=price)
+
+    if search_text:
+        queryset = queryset.filter(title__icontains=search_text)
+
+    if sort_type:
+        if sort_type == "1":
+            queryset = queryset.order_by('type')
+        elif sort_type == "2":
+            queryset = queryset.order_by('-type')
+
+    if sort_price:
+        if sort_price == "1":
+            queryset = queryset.order_by('price')
+        elif sort_price == "2":
+            queryset = queryset.order_by('-price')
+
+    filtered_items = []
+    for item in queryset:
+        sports_string = item.sports
+        sports_list = json.loads(sports_string)
+        if any(sport in sports_list['sports'] for sport in sports):
+            filtered_items.append(model_to_dict(item))
+
+    if not any([price, city, sports, sport_halls_type, date, time, search_text, sort_type, sort_price]):
+        filtered_items = SportHall.objects.all()
+
+    return Response({'status': True, 'data': filtered_items}, status=status.HTTP_200_OK)
+
 
 @swagger_auto_schema(
     method='get',
+    tags=['Player'],
     responses={
         200: "OK",
         404: "User not found"
@@ -453,8 +461,10 @@ def get_player_data(request, id):
     except User.DoesNotExist:
         return JsonResponse({"error": "Korisnik nije pronađen"}, status=status.HTTP_404_NOT_FOUND)
 
+
 @swagger_auto_schema(
     method='put',
+    tags=['Player'],
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
@@ -485,17 +495,20 @@ def update_player_data(request, id):
         user.city = data.get('city')
         user.age = data.get('age')
         user.save()
-        return JsonResponse({'status': True, 'message': 'Podatci uspješno promijenjeni'}, status=status.HTTP_200_OK)
+        return JsonResponse({'status': True, 'message': 'Podaci uspješno promijenjeni'}, status=status.HTTP_200_OK)
     except:
         return JsonResponse({'status': False, 'message': 'Korisnik nije pronađen'}, status=status.HTTP_404_NOT_FOUND)
 
+
 @swagger_auto_schema(
+    tags=['Authentication'],
     method='put',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
             'new_password': openapi.Schema(type=openapi.TYPE_STRING, description='The new password field'),
-            'new_repeated_password': openapi.Schema(type=openapi.TYPE_STRING, description='The new repeated password field'),
+            'new_repeated_password': openapi.Schema(type=openapi.TYPE_STRING,
+                                                    description='The new repeated password field'),
             'old_password': openapi.Schema(type=openapi.TYPE_STRING, description='The old password field'),
         },
         required=['new_password', 'new_repeated_password', 'old_password']
@@ -507,14 +520,16 @@ def update_player_data(request, id):
     }
 )
 @api_view(['PUT'])
-def update_player_password(request, id):
+def update_user_password(request, id):
     try:
         user = User.objects.get(id=id)
+        print(user)
         data = request.data
         old_password = data.get('oldPassword')
         new_password = data.get('newPassword')
         new_repeated_password = data.get('newRepeatedPassword')
         is_password_valid = check_password(old_password, user.password)
+        print(is_password_valid)
         if is_password_valid:
             if new_password == new_repeated_password:
                 user.password = make_password(new_password)
@@ -532,6 +547,7 @@ def update_player_password(request, id):
 
 @swagger_auto_schema(
     method='put',
+    tags=['Player'],
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
@@ -564,8 +580,10 @@ def update_player_photo(request, id):
         return JsonResponse({'status': False, 'message': 'Korisnik nije pronađen'},
                             status=status.HTTP_404_NOT_FOUND)
 
+
 @swagger_auto_schema(
     method='get',
+    tags=['Owner'],
     responses={
         200: "OK",
         404: "User not found"
@@ -574,7 +592,7 @@ def update_player_photo(request, id):
 @api_view(['GET'])
 def get_owner_data(request, id):
     try:
-        owner = list(Owner.objects.filter(id=id).values())
+        owner = list(User.objects.filter(user_type=UserType.objects.get(pk=2), id=id).values())
         return JsonResponse(owner, safe=False, status=status.HTTP_200_OK)
     except User.DoesNotExist:
         return JsonResponse({"error": "Korisnik nije pronađen"}, status=status.HTTP_404_NOT_FOUND)
@@ -582,6 +600,7 @@ def get_owner_data(request, id):
 
 @swagger_auto_schema(
     method='put',
+    tags=['Owner'],
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
@@ -602,7 +621,7 @@ def get_owner_data(request, id):
 @api_view(['PUT'])
 def update_owner_data(request, id):
     try:
-        owner = Owner.objects.get(id=id)
+        owner = User.objects.get(id=id)
         data = request.data
         owner.username = data.get('username')
         owner.name = data.get('name')
@@ -617,50 +636,10 @@ def update_owner_data(request, id):
         owner.capacity = data.get('capacity')
         owner.type = data.get('type')
         owner.save()
-        return JsonResponse({'status': True, 'message': 'Podatci uspješno promijenjeni'}, status=status.HTTP_200_OK)
+        return JsonResponse({'status': True, 'message': 'Podaci uspješno promijenjeni'}, status=status.HTTP_200_OK)
     except:
         return JsonResponse({'status': False, 'message': 'Korisnik nije pronađen'}, status=status.HTTP_404_NOT_FOUND)
 
-
-@swagger_auto_schema(
-    method='put',
-    request_body=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        properties={
-            'new_password': openapi.Schema(type=openapi.TYPE_STRING, description='The new password field'),
-            'new_repeated_password': openapi.Schema(type=openapi.TYPE_STRING, description='The new repeated password field'),
-            'old_password': openapi.Schema(type=openapi.TYPE_STRING, description='The old password field'),
-        },
-        required=['new_password', 'new_repeated_password', 'old_password']
-    ),
-    responses={
-        200: "OK",
-        404: "User not found",
-        400: "Bad request",
-    }
-)
-@api_view(['PUT'])
-def update_owner_password(request, id):
-    try:
-        owner = Owner.objects.get(id=id)
-        data = request.data
-        old_password = data.get('oldPassword')
-        new_password = data.get('newPassword')
-        new_repeated_password = data.get('newRepeatedPassword')
-        is_password_valid = check_password(old_password, owner.password)
-        if is_password_valid:
-            if new_password == new_repeated_password:
-                owner.password = make_password(new_password)
-                owner.save()
-                return JsonResponse({'status': True, 'message': 'Podatci uspješno promijenjeni'},
-                                    status=status.HTTP_200_OK)
-            else:
-                return JsonResponse({'status': False, 'message': 'Lozinke se ne podudaraju'},
-                                    status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return JsonResponse({'success': False, 'message': 'Pogrešna lozinka'}, status=status.HTTP_400_BAD_REQUEST)
-    except:
-        return JsonResponse({'success': False, 'message': 'Korisnik nije pronađen'}, status=status.HTTP_404_NOT_FOUND)
 
 @swagger_auto_schema(
     tags=['Sport Hall'],
@@ -700,62 +679,63 @@ def add_new_sport_hall(request):
     pictures = data.get('pictures')
 
     if owner_id is not None:
-        SportHall.objects.create(title=title, city=city, address=address,
-                                 description=description, status=sport_hall_status, price=price, capacity=capacity,
-                                 owner_id_id=owner_id, pictures=pictures)
-        return JsonResponse({'data': {title, city, address, description, price}, 'message': 'Uspješno kreiran novi teren.'},
-                        status=status.HTTP_200_OK)
+        sport_hall = SportHall.objects.create(title=title, city=city, address=address,
+                                              description=description, status=sport_hall_status, price=price,
+                                              capacity=capacity,
+                                              pictures=pictures)
+
+        owner = User.objects.get(id=owner_id)
+        Owner_SportHall.objects.create(owner=owner, sport_hall=sport_hall)
+
+        return JsonResponse(
+            {'data': {title, city, address, description, price}, 'message': 'Uspješno kreiran novi teren.'},
+            status=status.HTTP_200_OK)
     else:
         return JsonResponse({'data': {}, 'message': 'Došlo je do greške.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @swagger_auto_schema(
+    method='get',
     tags=['Sport Hall'],
-    method='post',
-    request_body=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        properties={
-            'owner_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the owner'),
-            'sporthall_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the sport hall'),
-        },
-        required=['owner_id', 'sporthall_id'],
-        example={
-            'owner_id': 1,
-            'sporthall_id': 2
-        }
-    ),
+    manual_parameters=[
+        openapi.Parameter('owner_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, description='ID of the owner'),
+        openapi.Parameter('sporthall_id', openapi.IN_QUERY, type=openapi.TYPE_INTEGER,
+                          description='ID of the sport hall'),
+    ],
     responses={
         200: openapi.Response(description='Success', schema=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'status': openapi.Schema(type=openapi.TYPE_BOOLEAN,
-                                         description='Indicates if the request was successful'),
-                'message': openapi.Schema(type=openapi.TYPE_STRING, description='A message indicating the result')
-            }
+                'data': openapi.Schema(type=openapi.TYPE_OBJECT, description='Data object'),
+            },
         )),
-        404: "Not Found",
-        500: "Internal Server Error"
+        404: openapi.Response(description='Not Found', schema=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'data': openapi.Schema(type=openapi.TYPE_OBJECT, description='Empty data object'),
+            },
+        )),
     }
 )
-@api_view(['POST'])
+@api_view(['GET'])
 def get_sport_hall(request):
-    data = request.data
+    data = request.GET.data
     owner_id = data.get('owner_id')
-    sporthall_id = data.get('sporthall_id')
-    owner = Owner.objects.get(id=owner_id)
-    sporthall = SportHall.objects.get(id=sporthall_id)
-    array_of_sporthalls = [owner, sporthall]
+    sport_hall_id = data.get('sporthall_id')
+    owner = list(User.objects.get(user_type=UserType.objects.get(pk=2), id=owner_id))
+    sport_hall = SportHall.objects.get(id=sport_hall_id)
+    array_of_sport_halls = [owner, sport_hall]
     try:
-        sporthalls_of_owner = Owner_SportHall.objects.filter(
+        sport_halls_of_owner = Owner_SportHall.objects.filter(
             owner_id_id=owner_id)
-        for sport_hall in sporthalls_of_owner:
-            if (int(sport_hall.owner_id_id) == int(owner_id)):
-                array_of_sporthalls.append(sport_hall)
+        for sport_hall in sport_halls_of_owner:
+            if int(sport_hall.owner_id_id) == int(owner_id):
+                array_of_sport_halls.append(sport_hall)
                 break
     except:
-        obj = serializers.serialize('json', array_of_sporthalls)
+        obj = serializers.serialize('json', array_of_sport_halls)
         return JsonResponse({'data': json.loads(obj)}, status=status.HTTP_404_NOT_FOUND)
-    obj = serializers.serialize('json', array_of_sporthalls)
+    obj = serializers.serialize('json', array_of_sport_halls)
     return JsonResponse({'data': json.loads(obj)}, status=status.HTTP_200_OK)
 
 
@@ -781,7 +761,6 @@ def get_sport_hall(request):
             }
         )),
         404: openapi.Response(description='Not Found'),
-        500: openapi.Response(description='Internal Server Error')
     }
 )
 @api_view(['DELETE'])
@@ -798,7 +777,7 @@ def remove_sport_hall(request):
 
 @swagger_auto_schema(
     tags=['Sport Hall'],
-    method='post',
+    method='patch',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
@@ -819,39 +798,106 @@ def remove_sport_hall(request):
                 'data': openapi.Schema(type=openapi.TYPE_OBJECT, properties={})
             }
         )),
-        404: "Not Found",
-        500: "Internal Server Error"
+        404: "Not Found"
     }
 )
-@api_view(['POST'])
-def change_sporthall_status(request):
+@api_view(['PATCH'])
+def change_sport_hall_status(request):
     data = request.data
-    sporthall_id = data.get('sporthall_id')
-    status = data.get('status')
+    sport_hall_id = data.get('sporthall_id')
+    sport_hall_status = data.get('status')
 
     try:
-        sporthall = SportHall.objects.get(id=sporthall_id)
-        sporthall.status = status
-        sporthall.save()
-        obj = serializers.serialize('json', sporthall)
+        sport_hall = SportHall.objects.get(id=sport_hall_id)
+        sport_hall.status = sport_hall_status
+        sport_hall.save()
+        obj = serializers.serialize('json', [sport_hall])  # Serialize as a list
         return JsonResponse({'data': json.loads(obj)}, status=200)
-    except:
-        return JsonResponse({'data': {}}, status=400)
+    except ObjectDoesNotExist:
+        return JsonResponse({'error': 'Sportski teren ne postoji'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
 
+
+@swagger_auto_schema(
+    method='post',
+    tags=['Team'],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'name': openapi.Schema(type=openapi.TYPE_STRING),
+            'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+        },
+        required=['name', 'id'],
+    ),
+    responses={
+        201: openapi.Response(description='Success', schema=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'success': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                'message': openapi.Schema(type=openapi.TYPE_STRING),
+            },
+        )),
+        400: openapi.Response(description='Bad Request', schema=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'error': openapi.Schema(type=openapi.TYPE_STRING),
+                'details': openapi.Schema(type=openapi.TYPE_STRING),
+            },
+        )),
+    }
+)
 @api_view(['POST'])
 def create_team(request):
     name = request.data.get('name')
     lead_id = request.data.get('id')
-    user = User.objects.get(id=lead_id)
-    team_lead = Team.objects.create(team_lead_id_id=lead_id)
-    PermanentTeams.objects.create(team_name=name, team_id_id=team_lead.id)
-    return JsonResponse({'success': True, 'message': 'Uspješno kreiran tim'}, status=201)
+
+    try:
+        team_lead = Team.objects.create(team_lead_id_id=lead_id)
+        PermanentTeams.objects.create(team_name=name, team_id_id=team_lead.id)
+        return JsonResponse({'success': True, 'message': 'Uspješno kreiran tim'}, status=201)
+    except IntegrityError as e:
+        return JsonResponse({'error': 'Kreiranje tima nije uspjelo', 'details': str(e)}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': 'Greška prilikom kreiranja tima', 'details': str(e)}, status=400)
 
 
+@swagger_auto_schema(
+    method='get',
+    tags=['Team'],
+    manual_parameters=[
+        openapi.Parameter(
+            name='id',
+            in_=openapi.IN_QUERY,
+            description='ID of the team lead',
+            type=openapi.TYPE_INTEGER,
+            required=True,
+        ),
+    ],
+    responses={
+        200: openapi.Response(description='Success', schema=openapi.Schema(
+            type=openapi.TYPE_ARRAY,
+            items=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'name': openapi.Schema(type=openapi.TYPE_STRING),
+                    'members': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                            'name': openapi.Schema(type=openapi.TYPE_STRING),
+                        },
+                    )),
+                },
+            ),
+        )),
+    }
+)
 @api_view(['GET'])
 def get_perm_teams(request):
-    id = request.GET.get('id')
-    list_of_teams = PermanentTeams.objects.filter(team_id__team_lead_id_id=id)
+    lead_id = request.GET.get('id')
+    list_of_teams = PermanentTeams.objects.filter(team_id__team_lead_id_id=lead_id)
     res = serializers.serialize('json', list_of_teams)
     data = []
 
@@ -884,14 +930,76 @@ def get_perm_teams(request):
     return JsonResponse(data, safe=False)
 
 
+@swagger_auto_schema(
+    method='delete',
+    tags=['Team'],
+    manual_parameters=[
+        openapi.Parameter(
+            name='id',
+            in_=openapi.IN_QUERY,
+            description='ID of the team to delete',
+            type=openapi.TYPE_INTEGER,
+            required=True,
+        ),
+    ],
+    responses={
+        200: openapi.Response(description='Success', schema=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'message': openapi.Schema(type=openapi.TYPE_STRING),
+                'data': openapi.Schema(type=openapi.TYPE_OBJECT),
+            },
+        )),
+        404: openapi.Response(description='Not Found', schema=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'error': openapi.Schema(type=openapi.TYPE_STRING),
+            },
+        )),
+        400: openapi.Response(description='Bad Request', schema=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'error': openapi.Schema(type=openapi.TYPE_STRING),
+            },
+        )),
+    }
+)
 @api_view(['DELETE'])
 def delete_team(request):
     team_id = request.GET.get('id')
-    team = PermanentTeams.objects.get(id=team_id)
-    team.delete()
-    return JsonResponse({'message': "Uspješno uklonjen tim.", 'data': {}}, status=status.HTTP_200_OK)
+
+    try:
+        team = PermanentTeams.objects.get(id=team_id)
+        team.delete()
+        return JsonResponse({'message': "Uspješno uklonjen tim.", 'data': {}}, status=status.HTTP_200_OK)
+    except PermanentTeams.DoesNotExist:
+        return JsonResponse({'error': 'Tim nije pronađen.'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+@swagger_auto_schema(
+    method='post',
+    tags=['Team'],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the team leader'),
+            'username': openapi.Schema(type=openapi.TYPE_STRING, description='Username of the team member to invite'),
+            'team_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID of the team'),
+        },
+        required=['id', 'username', 'team_id'],
+    ),
+    responses={
+        200: openapi.Response(description='Success', schema=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'message': openapi.Schema(type=openapi.TYPE_STRING, description='Success message'),
+                'memberName': openapi.Schema(type=openapi.TYPE_STRING, description='Username of the invited member'),
+            },
+        )),
+    }
+)
 @api_view(['POST'])
 def invite_team_member(request):
     lead_id = request.data.get('id')
@@ -908,8 +1016,8 @@ def invite_team_member(request):
     }
     details_json = json.dumps(details_data)
 
-    Invitations.objects.create(recipient_id=user.id,sender_id=lead_id, time_sent=formatted_time,
-    status=0, details=details_json)
+    Invitations.objects.create(recipient_id=user.id, sender_id=lead_id, time_sent=formatted_time,
+                               status=0, details=details_json)
     response_data = {
         'message': 'Invitation sent successfully',
         'memberName': name,
@@ -918,17 +1026,48 @@ def invite_team_member(request):
 
     return JsonResponse(response_data)
 
+
+@swagger_auto_schema(
+    method='delete',
+    tags=['Team'],
+    manual_parameters=[
+        openapi.Parameter('email', openapi.IN_QUERY, type=openapi.TYPE_STRING, description='Email of the team member'),
+        openapi.Parameter('teamId', openapi.IN_QUERY, type=openapi.TYPE_INTEGER, description='ID of the team'),
+    ],
+    responses={
+        200: openapi.Response(description='Success', schema=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'message': openapi.Schema(type=openapi.TYPE_STRING, description='Success message'),
+                'data': openapi.Schema(type=openapi.TYPE_OBJECT, description='Empty data object'),
+            },
+        )),
+        404: openapi.Response(description='Not Found', schema=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'error': openapi.Schema(type=openapi.TYPE_STRING, description='Error message'),
+            },
+        )),
+    }
+)
 @api_view(['DELETE'])
 def delete_team_member(request):
     email = request.GET.get('email')
-    user = User.objects.get(email=email)
-    user_id = user.id
     team_id = request.GET.get('teamId')
 
-    team_member = TeamMembers.objects.get(user_id_id=user_id, team_id_id=team_id)
-    team_member.delete()
+    try:
+        user = User.objects.get(email=email)
+        user_id = user.id
 
-    return JsonResponse({'message': "Uspješno uklonjen član tim.", 'data': {}}, status=status.HTTP_200_OK)
+        try:
+            team_member = TeamMembers.objects.get(user_id_id=user_id, team_id_id=team_id)
+            team_member.delete()
+            return JsonResponse({'message': "Uspješno uklonjen član tima.", 'data': {}}, status=status.HTTP_200_OK)
+        except TeamMembers.DoesNotExist:
+            return JsonResponse({'error': 'Ne postoji taj član u timu.'}, status=status.HTTP_404_NOT_FOUND)
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'Korisnik ne postoji.'}, status=status.HTTP_404_NOT_FOUND)
+
 
 @swagger_auto_schema(
     tags=['Authentication'],
@@ -958,12 +1097,53 @@ def confirm_email(request):
         user.confirmation_token = None
 
         user.save()
-        return Response({'message': 'Email confirmed successfully'})
+        return JsonResponse(
+            {'message': 'Email uspjesno potvrđen'},
+            status=status.HTTP_201_CREATED)
 
     except jwt.ExpiredSignatureError:
-        return Response({'message': 'Token has expired'})
-    except (jwt.DecodeError, User.DoesNotExist):
-        return Response({'message': 'Invalid token'})
+        return JsonResponse({'message': 'Token istekao'}, status=status.HTTP_410_GONE)
+    except jwt.InvalidTokenError:
+        return JsonResponse({'message': 'Token nije validan'}, status=status.HTTP_400_BAD_REQUEST)
+    except User.DoesNotExist:
+        return JsonResponse({'message': 'Korisnik ne postoji'}, status=status.HTTP_404_NOT_FOUND)
+
+
+@swagger_auto_schema(
+    tags=['Authentication'],
+    method='post',
+    manual_parameters=[
+        openapi.Parameter('email', openapi.IN_QUERY, description='Email',
+                          type=openapi.TYPE_STRING),
+    ],
+    responses={
+        200: openapi.Response(description='Success', schema=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'email': openapi.Schema(type=openapi.TYPE_STRING, description='Email'),
+            }
+        )),
+        404: "Not Found",
+        201: "Top"
+    }
+)
+@api_view(['POST'])
+def resend_confirmation_email(request):
+    try:
+        email = request.GET.get('email')
+        user = User.objects.get(email=email)
+
+        if user.email_confirmed:
+            return JsonResponse({'message': 'Email već potvrđen'}, status=status.HTTP_400_BAD_REQUEST)
+
+        token = send_confirmation_email(email)
+        user.token = token
+
+        user.save()
+
+        return Response({'message': 'Email uspješno potvrđen'})
+    except User.DoesNotExist:
+        return Response({'message': 'Korisnik ne postoji'})
 
 
 @swagger_auto_schema(
@@ -1005,7 +1185,7 @@ def contact_us(request):
 
     user_email_subject = 'Kontakt stranica'
     user_email_body = f'<p>Hvala Vam što ste nas kontaktirali {name}. Administrator će vas kontaktirati u skorije vrijeme na unesenu ' \
-        f'email adresu {email}</p>'
+                      f'email adresu {email}</p>'
 
     user_email = EmailMessage(
         user_email_subject,
@@ -1022,7 +1202,7 @@ def contact_us(request):
 
     email_subject = 'Kontakt stranica'
     email_body = f'<p>Osoba {name} Vas je kontaktirala.\n {message}\n ' \
-        f'sa email adresom {email}</p>'
+                 f'sa email adresom {email}</p>'
 
     email = EmailMessage(
         email_subject,
@@ -1038,28 +1218,50 @@ def contact_us(request):
     email.send()
 
     return JsonResponse(
-        {'message': 'Poštovani, hvala vam što ste nas kontaktirali! Odgovorit ćemo vam u što skorijem roku.'}, status=status.HTTP_200_OK)
+        {'message': 'Poštovani, hvala vam što ste nas kontaktirali! Odgovorit ćemo vam u što skorijem roku.'},
+        status=status.HTTP_200_OK)
 
 
 @swagger_auto_schema(
     method='get',
+    tags=['Invitations'],
     responses={
         200: "OK",
         404: "User not found"
     }
 )
 @api_view(['GET'])
-def get_player_invitations(request, id):
+def get_player_invitations(request):
     try:
-        invitations = list(Invitations.objects.filter(recipient_id=id)
-                       .values('id', 'sender__username', 'time_sent', 'status', 'details', 'type'))
-        return JsonResponse(invitations, safe=False, status=status.HTTP_200_OK)
-    except:
-        return JsonResponse({"message": "Korisnik nije pronadjen"}, status=status.HTTP_404_NOT_FOUND)
+        data = request.GET
+        invitation_id = data.get(id)
+        sorting_column = data.get('column')
+        sorting_order = data.get('order')
+        invite_status = data.get('status')
+        invitations = Invitations.objects.filter(recipient_id=invitation_id)
+
+        if sorting_order == 'asc':
+            sorted_queryset = list(Invitations.objects.filter(recipient_id=id, status=invite_status)
+                                   .values('id', 'sender__username', 'time_sent', 'status', 'details', 'type')
+                                   .order_by(sorting_column))
+
+        elif sorting_order == 'desc':
+            sorted_queryset = list(Invitations.objects.filter(recipient_id=id, status=invite_status)
+                                   .values('id', 'sender__username', 'time_sent', 'status', 'details', 'type')
+                                   .order_by('-' + sorting_column))
+
+        else:
+            sorted_queryset = list(
+                invitations.values('id', 'sender__username', 'time_sent', 'status', 'details', 'type'))
+
+        return JsonResponse(sorted_queryset, safe=False, status=status.HTTP_200_OK)
+    except Invitations.DoesNotExist:
+        return JsonResponse({"message": "Pozivnica ne postoji."}, status=status.HTTP_404_NOT_FOUND)
 
 
 @swagger_auto_schema(
     method='get',
+    tags=['Player'],
     responses={
         200: "OK",
         404: "User not found"
@@ -1070,8 +1272,8 @@ def get_player_friends(request, id):
     try:
         friends = list(Friends.objects.filter(user1_id=id).values('id', 'user2__username'))
         return JsonResponse(friends, safe=False, status=status.HTTP_200_OK)
-    except:
-        return JsonResponse({"message": "Korisnik nije pronadjen"}, status=status.HTTP_404_NOT_FOUND)
+    except Friends.DoesNotExist:
+        return JsonResponse({"message": "Prijatelj nije pronađen."}, status=status.HTTP_404_NOT_FOUND)
 
 
 @swagger_auto_schema(
@@ -1104,45 +1306,14 @@ def delete_player_friend(request, id):
     try:
         friend = Friends.objects.get(id=id)
         friend.delete()
-        return JsonResponse({'message': "Korisnik uspjesno obrisan iz prijatelja"}, status=status.HTTP_200_OK)
+        return JsonResponse({'message': "Korisnik uspješno obrisan iz prijatelja"}, status=status.HTTP_200_OK)
     except Friends.DoesNotExist:
         return JsonResponse({'status': False, 'message': 'Korisnik nije pronađen'}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        print(str(e))
-        return JsonResponse({'status': False, 'message': 'Greška na serveru'},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @swagger_auto_schema(
     method='get',
-    responses={
-        200: "OK",
-        404: "User not found"
-    }
-)
-@api_view(['GET'])
-def sort_player_invitations(request, id):
-    try:
-        data = request.GET
-        sorting_column = data.get('column')
-        sorting_order = data.get('order')
-        invite_status = data.get('status')
-        if sorting_order == 'asc':
-            sorted_queryset = list(Invitations.objects.filter(recipient_id=id, status=invite_status)
-                               .values('id', 'sender__username', 'time_sent', 'status', 'details', 'type')
-                               .order_by(sorting_column))
-        else:
-            sorted_queryset = list(Invitations.objects.filter(recipient_id=id, status=invite_status)
-                               .values('id', 'sender__username', 'time_sent', 'status', 'details', 'type')
-                               .order_by('-' + sorting_column))
-
-        return JsonResponse(sorted_queryset, safe=False, status=status.HTTP_200_OK)
-    except:
-        return JsonResponse({"message": "Korisnik nije pronađen"}, status=status.HTTP_404_NOT_FOUND)
-
-
-@swagger_auto_schema(
-    method='get',
+    tags=['Player'],
     responses={
         200: "OK",
         404: "User not found"
@@ -1167,74 +1338,86 @@ def sort_player_history(request, id):
                                    .order_by('-' + sorting_column))
 
         return JsonResponse(sorted_queryset, safe=False, status=status.HTTP_200_OK)
-    except:
+    except Games.DoesNotExist:
         return JsonResponse({"message": "Korisnik nije pronađen"}, status=status.HTTP_404_NOT_FOUND)
 
 
 @swagger_auto_schema(
     method='get',
+    tags=['Player'],
     responses={
         200: "OK",
         404: "User not found"
     }
 )
 @api_view(['GET'])
-def sort_player_friends(request, id):
+def sort_player_friends(request, player_id):
     try:
         data = request.GET
         sorting_column = data.get('column')
         sorting_order = data.get('order')
         if sorting_order == 'asc':
-            sorted_queryset = list(Friends.objects.filter(user1_id=id)
+            sorted_queryset = list(Friends.objects.filter(user1_id=player_id)
                                    .values('id', 'user2__username')
                                    .order_by(sorting_column))
         else:
-            sorted_queryset = list(Friends.objects.filter(user1_id=id)
+            sorted_queryset = list(Friends.objects.filter(user1_id=player_id)
                                    .values('id', 'user2__username')
                                    .order_by('-' + sorting_column))
 
         return JsonResponse(sorted_queryset, safe=False, status=status.HTTP_200_OK)
-    except:
+    except Friends.DoesNotExist:
         return JsonResponse({"message": "Korisnik nije pronađen"}, status=status.HTTP_404_NOT_FOUND)
+
 
 @swagger_auto_schema(
     method='put',
+    tags=['Invitations'],
+    operation_id='UpdateInvitationStatus',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
-            'status': openapi.Schema(type=openapi.TYPE_STRING, description='The status field'),
+            'status': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='The status to update the invitation'
+            ),
         },
         required=['status']
     ),
     responses={
-        200: "OK",
-        404: "User not found",
-        500: "Internal server error",
+        200: "OK",  # Replace with your 200 response schema
+        404: "Not found",  # Replace with your 404 response schema
     }
 )
 @api_view(['PUT'])
-def update_invitation_status(request, id):
+def update_invitation_status(request, invitation_id):
     try:
         data = request.data
-        invitations = Invitations.objects.get(id=id)
+        invitations = Invitations.objects.get(id=invitation_id)
         invitations.status = data.get('status')
         invitations.save()
         return JsonResponse({'status': True, 'message': 'Status uspješno promijenjen'}, status=status.HTTP_200_OK)
     except Invitations.DoesNotExist:
         return JsonResponse({'status': False, 'message': 'Korisnik nije pronađen'}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-        print(str(e))
-        return JsonResponse({'status': False, 'message': 'Greška na serveru'},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@swagger_auto_schema(
+    method='get',
+    tags=['Player'],
+    manual_parameters=[
+        openapi.Parameter('user_id', openapi.IN_PATH,
+                          description='User id', type=openapi.TYPE_STRING),
+    ]
+)
 @api_view(['GET'])
-def get_player_games(request, id):
+def get_player_games(request, user_id):
     try:
-        player_teams = list(TeamMembers.objects.filter(user_id_id=id).values_list('team_id_id', flat=True))
+        player_teams = list(TeamMembers.objects.filter(user_id_id=user_id).values_list('team_id_id', flat=True))
         teams = list(Games.objects.filter(team_id__in=player_teams)
-                     .values('id', 'hall_name', 'status', 'time_appointed', team_name=F('team_id__permanentteams__team_name')))
-        return JsonResponse(teams, safe=False, status=status.HTTP_200_OK)
-    except:
-        return JsonResponse({"message": "Korisnik nije pronadjen"}, status=status.HTTP_404_NOT_FOUND)
-
+                     .values('id', 'hall_name', 'status', 'time_appointed',
+                             team_name=F('team_id__permanentteams__team_name')))
+        return JsonResponse({'teams': teams}, status=status.HTTP_200_OK)
+    except TeamMembers.DoesNotExist:
+        return JsonResponse({"message": "Korisnik nije pronađen"}, status=status.HTTP_404_NOT_FOUND)
+    except Games.DoesNotExist:
+        return JsonResponse({"message": "Igra nije pronađena"}, status=status.HTTP_404_NOT_FOUND)
