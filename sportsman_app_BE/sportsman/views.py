@@ -8,12 +8,14 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F
 from django.forms import model_to_dict
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 from firebase_admin import storage
 from rest_framework.decorators import api_view
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.mail import EmailMessage
+from .decorators import authenticate
 from .helpers import send_confirmation_email
 from .models import *
 from django.utils.crypto import get_random_string
@@ -186,26 +188,31 @@ def login(request):
 
     if User.objects.filter(email=email).exists():
         user = User.objects.get(email=email)
-        is_password_valid = check_password(password, user.password)
-        if is_password_valid:
-            refresh = RefreshToken.for_user(user)
-            access_token = str(refresh)
-            user.access_token = access_token
+        if user.email_confirmed:
+            is_password_valid = check_password(password, user.password)
+            if is_password_valid:
+                refresh = RefreshToken.for_user(user)
+                access_token = str(refresh)
+                user.access_token = access_token
 
-            response.set_cookie(
-                "Authentication", access_token, 86400, httponly=True)
+                response.set_cookie(
+                    "Authentication", access_token, 86400, httponly=True)
 
-            response.data = {"user": {"id": user.id,
-                                      "email": user.email, "username": user.username,
-                                      "tel_number": user.tel_number, "age": user.age, "city": user.city,
-                                      "interests": user.interests,
-                                      "name": user.name, "surname": user.surname, "user_type": user.user_type.id,
-                                      "picture": user.picture}}
-            response.message = "Login successfully"
+                response.data = {"user": {"id": user.id,
+                                          "email": user.email, "username": user.username,
+                                          "tel_number": user.tel_number, "age": user.age, "city": user.city,
+                                          "interests": user.interests,
+                                          "name": user.name, "surname": user.surname, "user_type": user.user_type.id,
+                                          "picture": user.picture}}
+                response.message = "Login successfully"
 
-            return response
+                return response
+            else:
+                return JsonResponse({"message": "Pogrešan username ili password!!",
+                                     "data": {},
+                                     }, status=status.HTTP_400_BAD_REQUEST)
         else:
-            return JsonResponse({"message": "Pogrešan username ili password!!",
+            return JsonResponse({"message": "Email mora biti potvrđen",
                                  "data": {},
                                  }, status=status.HTTP_400_BAD_REQUEST)
     return JsonResponse({"message": "Pogrešan username ili password!!",
@@ -221,6 +228,7 @@ def login(request):
     },
 )
 @api_view(['POST'])
+@authenticate
 def logout(request):
     if request.user.is_authenticated:
         request.user.access_token = None
@@ -452,9 +460,9 @@ def get_all_sport_halls(request):
     }
 )
 @api_view(['GET'])
-def get_player_data(request, id):
+def get_player_data(request):
     try:
-        user = list(User.objects.filter(id=id).values())
+        user = list(User.objects.filter(id=request.data.id).values())
         return JsonResponse(user, safe=False, status=status.HTTP_200_OK)
     except User.DoesNotExist:
         return JsonResponse({"error": "Korisnik nije pronađen"}, status=status.HTTP_404_NOT_FOUND)
@@ -474,17 +482,17 @@ def get_player_data(request, id):
             'age': openapi.Schema(type=openapi.TYPE_INTEGER, description='The age field'),
         },
         required=['name', 'surname', 'username', 'tel_number', 'city', 'age']
-
     ),
     responses={
         200: "OK",
         404: "User not found"
     }
 )
+@authenticate
 @api_view(['PUT'])
-def update_player_data(request, id):
+def update_player_data(request, user_id):
     try:
-        user = User.objects.get(id=id)
+        user = User.objects.get(id=user_id)
         data = request.data
         user.username = data.get('username')
         user.name = data.get('name')
@@ -494,8 +502,10 @@ def update_player_data(request, id):
         user.age = data.get('age')
         user.save()
         return JsonResponse({'status': True, 'message': 'Podaci uspješno promijenjeni'}, status=status.HTTP_200_OK)
-    except:
-        return JsonResponse({'status': False, 'message': 'Korisnik nije pronađen'}, status=status.HTTP_404_NOT_FOUND)
+    except User.DoesNotExist:
+        return JsonResponse({"error": "Korisnik nije pronađen"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
 
 
 @swagger_auto_schema(
@@ -517,10 +527,11 @@ def update_player_data(request, id):
         400: "Bad request",
     }
 )
+@authenticate
 @api_view(['PUT'])
-def update_user_password(request, id):
+def update_user_password(request, user_id):
     try:
-        user = User.objects.get(id=id)
+        user = User.objects.get(id=user_id)
         print(user)
         data = request.data
         old_password = data.get('oldPassword')
@@ -558,8 +569,9 @@ def update_user_password(request, id):
         404: "User not found",
     }
 )
+@authenticate
 @api_view(['PUT'])
-def update_player_photo(request, id):
+def update_player_photo(request, user_id):
     uploaded_file = request.FILES.get('photo')
     user = User.objects.get(id=id)
     if uploaded_file:
@@ -616,10 +628,11 @@ def get_owner_data(request, id):
                   'capacity', 'street', 'streetNumber', 'type']
     )
 )
+@authenticate
 @api_view(['PUT'])
-def update_owner_data(request, id):
+def update_owner_data(request, user_id):
     try:
-        owner = User.objects.get(id=id)
+        owner = User.objects.get(id=user_id)
         data = request.data
         owner.username = data.get('username')
         owner.name = data.get('name')
@@ -635,8 +648,10 @@ def update_owner_data(request, id):
         owner.type = data.get('type')
         owner.save()
         return JsonResponse({'status': True, 'message': 'Podaci uspješno promijenjeni'}, status=status.HTTP_200_OK)
-    except:
-        return JsonResponse({'status': False, 'message': 'Korisnik nije pronađen'}, status=status.HTTP_404_NOT_FOUND)
+    except User.DoesNotExist:
+        return JsonResponse({"error": "Korisnik nije pronađen"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
 
 
 @swagger_auto_schema(
@@ -663,8 +678,9 @@ def update_owner_data(request, id):
         400: 'Bad Request',
     },
 )
+@authenticate
 @api_view(['POST'])
-def add_new_sport_hall(request):
+def add_new_sport_hall(request, user_id):
     data = request.data
     title = data.get('title')
     city = data.get('city')
@@ -673,16 +689,15 @@ def add_new_sport_hall(request):
     sport_hall_status = data.get('status')
     price = data.get('price')
     capacity = data.get('capacity')
-    owner_id = data.get('owner_id')
     pictures = data.get('pictures')
 
-    if owner_id is not None:
+    if user_id is not None:
         sport_hall = SportHall.objects.create(title=title, city=city, address=address,
                                               description=description, status=sport_hall_status, price=price,
                                               capacity=capacity,
                                               pictures=pictures)
 
-        owner = User.objects.get(id=owner_id)
+        owner = User.objects.get(id=user_id)
         Owner_SportHall.objects.create(owner=owner, sport_hall=sport_hall)
 
         return JsonResponse(
@@ -730,7 +745,7 @@ def get_sport_hall(request):
             if int(sport_hall.owner_id_id) == int(owner_id):
                 array_of_sport_halls.append(sport_hall)
                 break
-    except:
+    except Exception as e:
         obj = serializers.serialize('json', array_of_sport_halls)
         return JsonResponse({'data': json.loads(obj)}, status=status.HTTP_404_NOT_FOUND)
     obj = serializers.serialize('json', array_of_sport_halls)
@@ -761,13 +776,14 @@ def get_sport_hall(request):
         404: openapi.Response(description='Not Found'),
     }
 )
+@authenticate
 @api_view(['DELETE'])
-def remove_sport_hall(request):
+def remove_sport_hall(request, user_id):
     sporthall_id = request.data.get('sporthall_id')
 
     try:
-        sporthall = SportHall.objects.get(id=sporthall_id)
-        sporthall.delete()
+        sport_hall = get_object_or_404(Owner_SportHall, sport_hall_id=sporthall_id, owner_id=user_id)
+        sport_hall.delete()
         return JsonResponse({'message': "Uspješno uklonjen teren.", 'data': {}}, status=status.HTTP_200_OK)
     except SportHall.DoesNotExist:
         return JsonResponse({'message': "Došlo je do greške.", 'data': {}}, status=status.HTTP_404_NOT_FOUND)
@@ -799,22 +815,23 @@ def remove_sport_hall(request):
         404: "Not Found"
     }
 )
+@authenticate
 @api_view(['PATCH'])
-def change_sport_hall_status(request):
+def change_sport_hall_status(request, user_id):
     data = request.data
     sport_hall_id = data.get('sporthall_id')
     sport_hall_status = data.get('status')
 
     try:
-        sport_hall = SportHall.objects.get(id=sport_hall_id)
-        sport_hall.status = sport_hall_status
-        sport_hall.save()
-        obj = serializers.serialize('json', [sport_hall])  # Serialize as a list
+        sport_hall = Owner_SportHall.objects.get(sport_hall_id=sport_hall_id, owner_id=user_id)
+        sport_hall.sport_hall.status = sport_hall_status
+        sport_hall.sport_hall.save()
+        obj = serializers.serialize('json', [sport_hall])
         return JsonResponse({'data': json.loads(obj)}, status=200)
     except ObjectDoesNotExist:
-        return JsonResponse({'error': 'Sportski teren ne postoji'}, status=404)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
+        return JsonResponse({'message': 'Sportski teren ne postoji'}, status=404)
+    except Owner_SportHall.DoesNotExist:
+        return JsonResponse({'message': 'Sportski teren ne postoji'}, status=404)
 
 
 @swagger_auto_schema(
@@ -845,13 +862,13 @@ def change_sport_hall_status(request):
         )),
     }
 )
+@authenticate
 @api_view(['POST'])
-def create_team(request):
+def create_team(request, user_id):
     name = request.data.get('name')
-    lead_id = request.data.get('id')
 
     try:
-        team_lead = Team.objects.create(team_lead_id_id=lead_id)
+        team_lead = Team.objects.create(team_lead_id_id=user_id)
         PermanentTeams.objects.create(team_name=name, team_id_id=team_lead.id)
         return JsonResponse({'success': True, 'message': 'Uspješno kreiran tim'}, status=201)
     except IntegrityError as e:
@@ -962,6 +979,7 @@ def get_perm_teams(request):
         )),
     }
 )
+@authenticate
 @api_view(['DELETE'])
 def delete_team(request):
     team_id = request.GET.get('id')
@@ -998,6 +1016,7 @@ def delete_team(request):
         )),
     }
 )
+@authenticate
 @api_view(['POST'])
 def invite_team_member(request):
     lead_id = request.data.get('id')
@@ -1048,6 +1067,7 @@ def invite_team_member(request):
         )),
     }
 )
+@authenticate
 @api_view(['DELETE'])
 def delete_team_member(request):
     email = request.GET.get('email')
@@ -1111,6 +1131,7 @@ def confirm_email(request):
         return JsonResponse({'message': 'Korisnik ne postoji', 'email': None}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return JsonResponse({'message': 'Nešto je pošlo po zlu', 'email': None}, status=status.HTTP_400_BAD_REQUEST)
+
 
 @swagger_auto_schema(
     tags=['Authentication'],
@@ -1195,7 +1216,7 @@ def contact_us(request):
         load_dotenv("DEFAULT_FROM_EMAIL"),
         [email],
         headers={'From': 'Sportsman <{sportsmanMail}>'.format(
-            sportsmanMail= load_dotenv("DEFAULT_FROM_EMAIL"),)}
+            sportsmanMail=load_dotenv("DEFAULT_FROM_EMAIL"), )}
     )
 
     user_email.content_subtype = "html"
@@ -1212,7 +1233,7 @@ def contact_us(request):
         load_dotenv("DEFAULT_FROM_EMAIL"),
         [email],
         headers={'From': email, 'To': 'Sportsman <{sportsmanMail}>'.format(
-            sportsmanMail = load_dotenv("DEFAULT_FROM_EMAIL"))}
+            sportsmanMail=load_dotenv("DEFAULT_FROM_EMAIL"))}
     )
 
     email.content_subtype = "html"
@@ -1232,6 +1253,7 @@ def contact_us(request):
         404: "User not found"
     }
 )
+@authenticate
 @api_view(['GET'])
 def get_player_invitations(request):
     try:
@@ -1303,6 +1325,7 @@ def get_player_friends(request, id):
         500: openapi.Response(description='Internal Server Error')
     }
 )
+@authenticate
 @api_view(['DELETE'])
 def delete_player_friend(request, id):
     try:
@@ -1391,6 +1414,7 @@ def sort_player_friends(request, player_id):
         404: "Not found",  # Replace with your 404 response schema
     }
 )
+@authenticate
 @api_view(['PUT'])
 def update_invitation_status(request, invitation_id):
     try:
