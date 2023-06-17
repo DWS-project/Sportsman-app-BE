@@ -1239,7 +1239,7 @@ def get_player_games(request, id):
     except:
         return JsonResponse({"message": "Korisnik nije pronadjen"}, status=status.HTTP_404_NOT_FOUND)
 
-@authenticate
+
 @api_view(['GET'])
 def get_my_sport_halls(request):
     owner_id = request.GET.get('id')
@@ -1249,7 +1249,7 @@ def get_my_sport_halls(request):
     sport_halls_data = list(sport_halls)
 
     return JsonResponse(sport_halls_data, safe=False, status=status.HTTP_200_OK)
-@authenticate
+
 @api_view(['POST'])
 def add_sport_hall(request):
     uploaded_file = request.data.get('slika')
@@ -1291,14 +1291,14 @@ def add_sport_hall(request):
     sport_hall.save()
 
     return Response({'message': 'Teren uspješno dodan'})
-@authenticate
+
 @api_view(['DELETE'])
 def delete_sport_hall(request, id):
     sport_hall = SportHall.objects.get(id=id)
     sport_hall.delete()
     return JsonResponse({'message': "Uspješno uklonjen teren.", 'data': {}}, status=status.HTTP_200_OK)
 
-@authenticate
+
 @api_view(['PUT'])
 def update_my_sport_hall(request):
     data = request.data
