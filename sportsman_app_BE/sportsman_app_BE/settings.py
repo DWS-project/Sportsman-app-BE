@@ -21,7 +21,6 @@ load_dotenv()
 cred = credentials.Certificate("../cloud_key.json")
 app = firebase_admin.initialize_app(cred, {'storageBucket': 'sportsmanappcloud.appspot.com'})
 
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -40,13 +39,13 @@ CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
 APPEND_SLASH = False
 
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_HOST_USER = 'sportsmandev520@gmail.com'
 EMAIL_HOST_PASSWORD = 'juqvxmyyllnjkazw'  #'sportsmandev!.'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -60,7 +59,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework_simplejwt',
     'drf_yasg',
-    'corsheaders',
+    'corsheaders'
 ]
 
 REST_FRAMEWORK = {
