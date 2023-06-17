@@ -355,11 +355,34 @@ def forgot_password(request):
         200: "OK",
     }
 )
+
 @api_view(['GET'])
 def get_all_players(request):
-    users = list(User.objects.filter(owner__isnull=True).values(
+    params = request.GET
+
+    if params:
+        city = params.get('city')
+        age = params.get('age')
+        interest = params.get('interests')
+        users = User.objects.all()
+        filtered_users = []
+        for user in users:
+            interests_json = user.interests
+            if interests_json:
+                interests_data = json.loads(interests_json)
+                print(interests_data)
+                if interest in interests_data.get('interests', []):
+                    filtered_users.append(user.id)
+        users = list(User.objects.filter(user_type_id=1,
+                                         age__lte=age,
+                                         city=city,
+                                         id__in=filtered_users).values(
+            'id', 'name', 'surname', 'username', 'city', 'age', 'interests', 'picture'))
+        return JsonResponse(users, safe=False, status=status.HTTP_200_OK)
+    else:
+        users = list(User.objects.filter(user_type_id=1).values(
         'id', 'name', 'surname', 'username', 'city', 'age', 'interests', 'picture'))
-    return JsonResponse(users, safe=False, status=status.HTTP_200_OK)
+        return JsonResponse(users, safe=False, status=status.HTTP_200_OK)
 
 
 @swagger_auto_schema(
@@ -460,9 +483,9 @@ def get_all_sport_halls(request):
     }
 )
 @api_view(['GET'])
-def get_player_data(request):
+def get_player_data(request, id):
     try:
-        user = list(User.objects.filter(id=request.data.id).values())
+        user = list(User.objects.filter(id=id).values())
         return JsonResponse(user, safe=False, status=status.HTTP_200_OK)
     except User.DoesNotExist:
         return JsonResponse({"error": "Korisnik nije pronađen"}, status=status.HTTP_404_NOT_FOUND)
@@ -488,7 +511,6 @@ def get_player_data(request):
         404: "User not found"
     }
 )
-@authenticate
 @api_view(['PUT'])
 def update_player_data(request, user_id):
     try:
@@ -569,9 +591,9 @@ def update_user_password(request, user_id):
         404: "User not found",
     }
 )
-@authenticate
+
 @api_view(['PUT'])
-def update_player_photo(request, user_id):
+def update_player_photo(request, id):
     uploaded_file = request.FILES.get('photo')
     user = User.objects.get(id=id)
     if uploaded_file:
@@ -1247,40 +1269,47 @@ def contact_us(request):
 
 @swagger_auto_schema(
     method='get',
-    tags=['Invitations'],
     responses={
         200: "OK",
         404: "User not found"
     }
 )
-@authenticate
 @api_view(['GET'])
-def get_player_invitations(request):
+def get_player_invitations(request, id):
+    try:
+        invitations = list(Invitations.objects.filter(recipient_id=id)
+                       .values('id', 'sender__username', 'time_sent', 'status', 'details', type=F('invitation_type__name')))
+        return JsonResponse(invitations, safe=False, status=status.HTTP_200_OK)
+    except:
+        return JsonResponse({"message": "Korisnik nije pronadjen"}, status=status.HTTP_404_NOT_FOUND)
+
+
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: "OK",
+        404: "User not found"
+    }
+)
+@api_view(['GET'])
+def sort_player_invitations(request, id):
     try:
         data = request.GET
-        invitation_id = data.get(id)
         sorting_column = data.get('column')
         sorting_order = data.get('order')
         invite_status = data.get('status')
-        invitations = Invitations.objects.filter(recipient_id=invitation_id)
-
         if sorting_order == 'asc':
             sorted_queryset = list(Invitations.objects.filter(recipient_id=id, status=invite_status)
-                                   .values('id', 'sender__username', 'time_sent', 'status', 'details', 'type')
-                                   .order_by(sorting_column))
-
-        elif sorting_order == 'desc':
-            sorted_queryset = list(Invitations.objects.filter(recipient_id=id, status=invite_status)
-                                   .values('id', 'sender__username', 'time_sent', 'status', 'details', 'type')
-                                   .order_by('-' + sorting_column))
-
+                               .values('id', 'sender__username', 'time_sent', 'status', 'details', type=F('invitation_type__name'))
+                               .order_by(sorting_column))
         else:
-            sorted_queryset = list(
-                invitations.values('id', 'sender__username', 'time_sent', 'status', 'details', 'type'))
+            sorted_queryset = list(Invitations.objects.filter(recipient_id=id, status=invite_status)
+                               .values('id', 'sender__username', 'time_sent', 'status', 'details', type=F('invitation_type__name'))
+                               .order_by('-' + sorting_column))
 
         return JsonResponse(sorted_queryset, safe=False, status=status.HTTP_200_OK)
-    except Invitations.DoesNotExist:
-        return JsonResponse({"message": "Pozivnica ne postoji."}, status=status.HTTP_404_NOT_FOUND)
+    except:
+        return JsonResponse({"message": "Korisnik nije pronađen"}, status=status.HTTP_404_NOT_FOUND)
 
 
 @swagger_auto_schema(
@@ -1325,7 +1354,7 @@ def get_player_friends(request, id):
         500: openapi.Response(description='Internal Server Error')
     }
 )
-@authenticate
+
 @api_view(['DELETE'])
 def delete_player_friend(request, id):
     try:
@@ -1353,13 +1382,13 @@ def sort_player_history(request, id):
         player_teams = list(TeamMembers.objects.filter(user_id_id=id).values_list('team_id_id', flat=True))
         if sorting_order == 'asc':
             sorted_queryset = list(Games.objects.filter(team_id__in=player_teams)
-                                   .values('id', 'hall_name', 'status', 'time_appointed',
-                                           team_name=F('team_id__permanentteams__team_name'))
+                                   .values('id', 'status', 'time_appointed',
+                                           team_name=F('team_id__permanentteams__team_name') , hall_name=F('sport_hall__title'))
                                    .order_by(sorting_column))
         else:
             sorted_queryset = list(Games.objects.filter(team_id__in=player_teams)
-                                   .values('id', 'hall_name', 'status', 'time_appointed',
-                                           team_name=F('team_id__permanentteams__team_name'))
+                                   .values('id', 'status', 'time_appointed',
+                                           team_name=F('team_id__permanentteams__team_name'), hall_name=F('sport_hall__title'))
                                    .order_by('-' + sorting_column))
 
         return JsonResponse(sorted_queryset, safe=False, status=status.HTTP_200_OK)
@@ -1414,7 +1443,6 @@ def sort_player_friends(request, player_id):
         404: "Not found",  # Replace with your 404 response schema
     }
 )
-@authenticate
 @api_view(['PUT'])
 def update_invitation_status(request, invitation_id):
     try:
@@ -1440,8 +1468,8 @@ def get_player_games(request, user_id):
     try:
         player_teams = list(TeamMembers.objects.filter(user_id_id=user_id).values_list('team_id_id', flat=True))
         teams = list(Games.objects.filter(team_id__in=player_teams)
-                     .values('id', 'hall_name', 'status', 'time_appointed',
-                             team_name=F('team_id__permanentteams__team_name')))
+                     .values('id',  'status', 'time_appointed',
+                             team_name=F('team_id__permanentteams__team_name'), hall_name=F('sport_hall__title')))
         return JsonResponse({'teams': teams}, status=status.HTTP_200_OK)
     except TeamMembers.DoesNotExist:
         return JsonResponse({"message": "Korisnik nije pronađen"}, status=status.HTTP_404_NOT_FOUND)
