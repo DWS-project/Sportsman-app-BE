@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta
 from django.core.mail import EmailMessage
+
 from os import environ
 import jwt
 from django.conf import settings
+
 
 def send_confirmation_email(email):
     expiration_time = datetime.utcnow() + timedelta(hours=3)
