@@ -36,16 +36,16 @@ urlpatterns = [
     path('player/all', views.get_all_players, name='getAllUsers'),
     path('player/<int:id>', views.get_player_data, name="getPlayerData"),
     path('player/update', views.update_player_data, name="updatePlayerData"),
-    path('player/change-profile-photo/<int:id>/', views.update_player_photo, name="updateUserPhoto"),
+    path('player/change-profile-photo/<int:id>', views.update_player_photo, name="updateUserPhoto"),
 
     path('contact-us', views.contact_us, name='contactUs'),
 
-    path('player/invitation/<int:id>/', views.get_player_invitations, name="getPlayerInvitations"),
-    path('player/invitation/status/<int:invitation_id>/', views.update_invitation_status, name="updateInvitationStatus"),
-
+    path('player/invitation/<int:id>', views.get_player_invitations, name="getPlayerInvitations"),
+    path('player/update-invitation-status/<int:invitation_id>', views.update_invitation_status, name="updateInvitationStatus"),
+    path('player/sort-invitation/<int:id>', views.sort_player_invitations, name="sortPlayerInvitations"),
     path('player/friends/<int:id>', views.get_player_friends, name="getPlayerFriends"),
-    path('player/friends/sort-history/<int:id>', views.sort_player_history, name="sortPlayerHistory"),
-    path('player/friends/sort-friends/<int:player_id>', views.sort_player_friends, name="sortPlayerFriends"),
-
+    path('player/sort-history/<int:id>', views.sort_player_history, name="sortPlayerHistory"),
+    path('player/sort-friends/<int:player_id>', views.sort_player_friends, name="sortPlayerFriends"),
+    path('player/delete-friend/<int:id>', views.delete_player_friend, name="deletePlayerFriends"),
     path('player/games/<int:user_id>', views.get_player_games, name="getPlayerGames"),
 ]
