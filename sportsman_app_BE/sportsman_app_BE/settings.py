@@ -21,7 +21,6 @@ load_dotenv()
 cred = credentials.Certificate("../cloud_key.json")
 app = firebase_admin.initialize_app(cred, {'storageBucket': 'sportsmanappcloud.appspot.com'})
 
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -60,7 +59,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework_simplejwt',
     'drf_yasg',
-    'corsheaders',
+    'corsheaders'
 ]
 
 REST_FRAMEWORK = {
