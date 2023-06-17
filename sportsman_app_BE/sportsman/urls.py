@@ -52,10 +52,7 @@ urlpatterns = [
 
     path('player/invitation/<int:id>', views.get_player_invitations, name="getPlayerInvitations"),
     path('player/update-invitation-status/<int:invitation_id>', views.update_invitation_status, name="updateInvitationStatus"),
-    path('player/sort-invitation/<int:id>', views.sort_player_invitations, name="sortPlayerInvitations"),
     path('player/friends/<int:id>', views.get_player_friends, name="getPlayerFriends"),
-    path('player/sort-history/<int:id>', views.sort_player_history, name="sortPlayerHistory"),
-    path('player/sort-friends/<int:player_id>', views.sort_player_friends, name="sortPlayerFriends"),
     path('player/delete-friend/<int:id>', views.delete_player_friend, name="deletePlayerFriends"),
     path('player/games/<int:user_id>', views.get_player_games, name="getPlayerGames"),
 ]
