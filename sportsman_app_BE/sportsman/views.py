@@ -160,7 +160,7 @@ def registration_owner(request):
             'name': name,
             'surname': surname, 'username': username,
             'email': email,
-            "tel_number": tel_number,
+            'tel_number': tel_number,
             'password': make_password(password),
             'confirmation_token': token,
             'email_confirmed': False,
@@ -455,7 +455,7 @@ def get_all_sport_halls(request):
         queryset = queryset.filter(city=city)
 
     if sport_halls_type:
-        queryset = queryset.filter(type__in=sport_halls_type)
+        queryset = queryset.filter(type__in=sport_halls_type) | queryset.filter(type="obaTipa")
 
     if price:
         queryset = queryset.filter(price__lte=price)
@@ -483,7 +483,11 @@ def get_all_sport_halls(request):
             item_dict['sports'] = sports_list
             filtered_items.append(item_dict)
     if not any([price, city, sports, sport_halls_type, date, time, search_text, sort_type, sort_price]):
-        filtered_items = [model_to_dict(item) for item in SportHall.objects.all()]
+        for item in queryset:
+            item_dict = model_to_dict(item)
+            sports_list = [sport.name for sport in item.sports.all()]
+            item_dict['sports'] = sports_list
+            filtered_items.append(item_dict)
 
     return Response({'status': True, 'data': filtered_items}, status=status.HTTP_200_OK)
 
@@ -1809,7 +1813,7 @@ def get_player_games(request, user_id):
 @api_view(['GET'])
 def get_my_sport_halls(request):
     owner_id = request.GET.get('id')
-    sport_halls = SportHall.objects.filter(owner_id_id=owner_id).values(
+    sport_halls = SportHall.objects.filter(owner_id=owner_id).values(
         'title', 'city', 'address', 'description', 'status', 'price', 'pictures', 'owner_id', 'id','sports','capacity'
     )
     sport_halls_data = list(sport_halls)
