@@ -40,8 +40,6 @@ from channels.layers import get_channel_layer
 load_dotenv()
 
 
-# Create your views here.
-
 @swagger_auto_schema(
     tags=['Authentication'],
     method='post',
@@ -229,7 +227,7 @@ def login(request):
                 return response
             else:
                 return JsonResponse({"message": "Pogrešan username ili password!!",
-                                     "data": {},
+                                    "data": {},
                                      }, status=status.HTTP_400_BAD_REQUEST)
         else:
             return JsonResponse({"message": "Email mora biti potvrđen",
