@@ -8,7 +8,7 @@ urlpatterns = [
          views.registration_player, name='registrationPlayer'),
     path('authentication/register-owner',
          views.registration_owner, name='registrationOwner'),
-    path('authentication/change-password/<int:id>', views.update_user_password, name="updateUserPassword"),
+    path('authentication/change-password/<int:user_id>', views.update_user_password, name="updateUserPassword"),
     re_path(r'^authentication/confirm-email/$',
             views.confirm_email, name='confirm_email'),
     path('get-sport-hall-user', views.get_sport_hall_user, name='getSportHallUser'),
@@ -45,7 +45,7 @@ urlpatterns = [
 
     path('player/all', views.get_all_players, name='getAllUsers'),
     path('player/<int:id>', views.get_player_data, name="getPlayerData"),
-    path('player/update', views.update_player_data, name="updatePlayerData"),
+    path('player/update/<int:user_id>', views.update_player_data, name="updatePlayerData"),
     path('player/change-profile-photo/<int:id>', views.update_player_photo, name="updateUserPhoto"),
 
     path('contact-us', views.contact_us, name='contactUs'),
