@@ -525,7 +525,6 @@ def get_player_data(request, id):
         404: "User not found"
     }
 )
-@authenticate
 @api_view(['PUT'])
 def update_player_data(request, user_id):
     try:
