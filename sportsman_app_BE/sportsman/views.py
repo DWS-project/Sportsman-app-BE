@@ -993,8 +993,9 @@ def change_sport_hall_status(request, user_id):
 )
 @api_view(['POST'])
 def create_team(request):
-    name = request.data.get('name')
-    user_id = request.data.get('id')
+    data = request.data
+    name = data.get('name')
+    user_id = data.get('id')
     try:
         team_lead = Team.objects.create(team_lead_id_id=user_id)
         PermanentTeams.objects.create(team_name=name, team_id_id=team_lead.id)
@@ -1039,7 +1040,8 @@ def create_team(request):
 )
 @api_view(['GET'])
 def get_perm_teams(request):
-    lead_id = request.GET.get('id')
+    data = request.GET
+    lead_id = data.get('id')
     list_of_teams = PermanentTeams.objects.filter(team_id__team_lead_id_id=lead_id)
     res = serializers.serialize('json', list_of_teams)
     data = []
@@ -1109,7 +1111,8 @@ def get_perm_teams(request):
 )
 @api_view(['DELETE'])
 def delete_team(request):
-    team_id = request.GET.get('id')
+    data = request.GET
+    team_id = data.get('id')
 
     try:
         team = PermanentTeams.objects.get(id=team_id)
@@ -1145,9 +1148,10 @@ def delete_team(request):
 )
 @api_view(['POST'])
 def invite_team_member(request):
-    lead_id = request.data.get('id')
-    name = request.data.get('username')
-    team_id = request.data.get('team_id')
+    data = request.data
+    lead_id = data.get('id')
+    name = data.get('username')
+    team_id = data.get('team_id')
     user = User.objects.get(username=name)
     current_time = timezone.localtime(timezone.now())
     formatted_time = current_time.strftime('%Y-%m-%d %H:%M:%S')
@@ -1195,8 +1199,9 @@ def invite_team_member(request):
 )
 @api_view(['DELETE'])
 def delete_team_member(request):
-    email = request.GET.get('email')
-    team_id = request.GET.get('teamId')
+    data = request.GET
+    email = data.get('email')
+    team_id = data.get('teamId')
 
     try:
         user = User.objects.get(email=email)
