@@ -32,7 +32,7 @@ urlpatterns = [
 
     path('sport-hall', views.get_all_sport_halls, name='getAllSportHalls'),
     path('sport-hall/<int:owner_id>/<int:sporthall_id>', views.get_sport_hall, name='getSportHall'),
-    path('sport-hall', views.add_new_sport_hall, name='addNewSportHall'),
+    #path('sport-hall', views.add_new_sport_hall, name='addNewSportHall'),
     path('sport-hall/remove', views.remove_sport_hall, name='removeSportHall'),
     path('sport-hall/change-status',
          views.change_sport_hall_status, name='changeSportHallStatus'),
