@@ -451,15 +451,16 @@ def get_all_owners(request):
 )
 @api_view(['GET'])
 def get_all_sport_halls(request):
-    price = request.GET.get('price')
-    city = request.GET.get('city')
-    sports = request.GET.getlist('sports[]')
-    sport_halls_type = request.GET.getlist('type[]')
-    date = request.GET.get('date')
-    time = request.GET.get('time')
-    search_text = request.GET.get('searchText')
-    sort_type = request.GET.get('sort_type')
-    sort_price = request.GET.get('sort_price')
+    data = request.GET
+    price = data.get('price')
+    city = data.get('city')
+    sports = data.getlist('sports[]')
+    sport_halls_type = data.getlist('type[]')
+    date = data.get('date')
+    time = data.get('time')
+    search_text = data.get('searchText')
+    sort_type = data.get('sort_type')
+    sort_price = data.get('sort_price')
 
     queryset = SportHall.objects.all()
 
