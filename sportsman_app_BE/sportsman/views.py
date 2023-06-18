@@ -105,8 +105,8 @@ def registration_player(request):
             'user_type': UserType.objects.get(pk=1)
         })
         channel_layer = get_channel_layer()
-        event = 'new_player_registered'
-        message = {'message': 'New player registered: {}'.format(username)}
+        event = 'NEW_PLAYER_REGISTERED'
+        message = {'message': 'Novi igrač je registrovan: {}'.format(username)}
 
         async_to_sync(channel_layer.group_send)('room', {
             'type': 'send_message',
@@ -749,6 +749,17 @@ def add_new_sport_hall(request, user_id):
         owner = User.objects.get(id=user_id)
         Owner_SportHall.objects.create(owner=owner, sport_hall=sport_hall)
 
+        channel_layer = get_channel_layer()
+        event = 'NEW_SPORT_HALL_REGISTERED'
+        message = {
+            'message': 'Novi teren je registrovan: {}'.format(title)}
+
+        async_to_sync(channel_layer.group_send)('room', {
+            'type': 'send_message',
+            'event': event,
+            'message': message
+        })
+
         return JsonResponse(
             {'data': {title, city, address, description, price},
                 'message': 'Uspješno kreiran novi teren.'},
@@ -1035,6 +1046,18 @@ def create_team(request):
     try:
         team_lead = Team.objects.create(team_lead_id_id=user_id)
         PermanentTeams.objects.create(team_name=name, team_id_id=team_lead.id)
+
+        channel_layer = get_channel_layer()
+        event = 'NEW_TEAM_REGISTERED'
+        message = {
+            'message': 'Novi tim je registrovan: {}'.format(name)}
+
+        async_to_sync(channel_layer.group_send)('room', {
+            'type': 'send_message',
+            'event': event,
+            'message': message
+        })
+
         return JsonResponse({'success': True, 'message': 'Uspješno kreiran tim'}, status=201)
     except IntegrityError as e:
         return JsonResponse({'error': 'Kreiranje tima nije uspjelo', 'details': str(e)}, status=400)
