@@ -136,7 +136,7 @@ class Games(models.Model):
     sport_hall = models.ForeignKey(SportHall, on_delete=models.CASCADE, null=True)
 
     def __str__(self):
-        return "hall: " + str(self.hall_name) + " Team_id: " + str(self.team_id) + "status: " + str(self.status)
+        return "hall: " + str(self.sport_hall) + " Team_id: " + str(self.team_id) + "status: " + str(self.status)
 
 
 class Reservations(models.Model):
