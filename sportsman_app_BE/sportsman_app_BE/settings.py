@@ -39,13 +39,13 @@ CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
 APPEND_SLASH = False
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_HOST_USER = 'sportsmandev520@gmail.com'
 EMAIL_HOST_PASSWORD = 'juqvxmyyllnjkazw'  #'sportsmandev!.'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
+
 # Application definition
 
 INSTALLED_APPS = [

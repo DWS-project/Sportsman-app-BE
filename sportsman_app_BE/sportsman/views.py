@@ -4,6 +4,15 @@ import json
 from sqlite3 import IntegrityError
 
 import jwt
+from datetime import timedelta
+import firebase_admin
+from django.contrib.auth import authenticate
+from django.db.models import F
+from django.http import JsonResponse
+from django.utils import timezone
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework.decorators import api_view
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import F
 from django.forms import model_to_dict
@@ -1795,3 +1804,86 @@ def get_player_games(request, user_id):
             return JsonResponse({"message": "Korisnik nije pronađen"}, status=status.HTTP_404_NOT_FOUND)
         except Games.DoesNotExist:
             return JsonResponse({"message": "Igra nije pronađena"}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET'])
+def get_my_sport_halls(request):
+    owner_id = request.GET.get('id')
+    sport_halls = SportHall.objects.filter(owner_id_id=owner_id).values(
+        'title', 'city', 'address', 'description', 'status', 'price', 'pictures', 'owner_id', 'id','sports','capacity'
+    )
+    sport_halls_data = list(sport_halls)
+
+    return JsonResponse(sport_halls_data, safe=False, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+def add_sport_hall(request):
+    uploaded_file = request.data.get('slika')
+    print(request.data)
+    image_url = ''
+    if uploaded_file:
+        bucket = storage.bucket()
+        filename = uploaded_file.name
+        blob = bucket.blob(filename)
+        blob.content_type = 'image/jpeg'
+        blob.upload_from_file(uploaded_file)
+        blob.make_public()
+        image_url = blob.public_url
+
+    ime_terena = request.data.get('imeTerena')
+    opis_terena = request.data.get('opisTerena')
+    grad = request.data.get('grad')
+    adresa = request.data.get('adresa')
+    cijena = request.data.get('cijena')
+    kapacitet = request.data.get('kapacitet')
+    tip_terena = request.data.get('tipTerena')
+    cijena = request.data.get('cijena')
+    sportovi = request.data.get('sportovi')
+    owner_id = int(request.data.get('id'))
+    sport_hall = SportHall(
+        title=ime_terena,
+        description=opis_terena,
+        city=grad,
+        address=adresa,
+        price=cijena,
+        capacity=kapacitet,
+        type=tip_terena,
+        owner_id_id=owner_id,
+        status='open',
+        pictures=image_url,
+        sports=sportovi
+    )
+
+    sport_hall.save()
+
+    return Response({'message': 'Teren uspješno dodan'})
+
+@api_view(['DELETE'])
+def delete_sport_hall(request, id):
+    sport_hall = SportHall.objects.get(id=id)
+    sport_hall.delete()
+    return JsonResponse({'message': "Uspješno uklonjen teren.", 'data': {}}, status=status.HTTP_200_OK)
+
+
+@api_view(['PUT'])
+def update_my_sport_hall(request):
+    data = request.data
+    print(data)
+    sporthall_id = data.get('id')
+    sporthall = SportHall.objects.get(id=sporthall_id)
+    sporthall.title = data.get('imeTerena')
+    sporthall.description = data.get('opis')
+    sporthall.city = data.get('grad')
+    sporthall.address = data.get('adresa')
+    sporthall.price = data.get('cijena')
+    sporthall.capacity = data.get('kapacitet')
+    sportovi = data.get('sportovi')
+    sportovi_str = ', '.join(sportovi)
+    sporthall.sports = sportovi_str
+    if data.get('statusTerena') == '' or 'open':
+        sporthall.status = 'open'
+    else:
+        sporthall.status = 'closed'
+    sporthall.save()
+    return JsonResponse({'message': "Uspješno ažuriran teren.", 'data': {}}, status=status.HTTP_200_OK)
+
+

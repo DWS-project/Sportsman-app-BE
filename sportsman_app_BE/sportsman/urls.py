@@ -55,4 +55,13 @@ urlpatterns = [
     path('player/friends/<int:id>', views.get_player_friends, name="getPlayerFriends"),
     path('player/delete-friend/<int:id>', views.delete_player_friend, name="deletePlayerFriends"),
     path('player/games/<int:user_id>', views.get_player_games, name="getPlayerGames"),
+    path('player/delete-friend/<int:id>', views.delete_player_friend, name="deletePlayerFriend"),
+    path('player/sort-invitations/<int:id>', views.sort_player_invitations, name="sortPlayerInvitations"),
+    path('player/sort-history/<int:id>', views.sort_player_history, name="sortPlayerHistory"),
+    path('player/sort-friends/<int:id>', views.sort_player_friends, name="sortPlayerFriends"),
+    path('player/games/<int:id>', views.get_player_games, name="getPlayerGames"),
+    path('get-my-sport-halls', views.get_my_sport_halls, name="getMySportHalls"),
+    path('add-new-sport-hall', views.add_sport_hall, name="addSportHall"),
+    path('delete-my-sport-hall/<int:id>', views.delete_sport_hall, name="deleteSportHall"),
+    path('update-my-sport-hall', views.update_my_sport_hall, name='updateSportHall'),
 ]
