@@ -39,9 +39,10 @@ urlpatterns = [
 
     path('team/all', views.get_perm_teams, name='getTeams'),
     path('team/', views.create_team, name='createTeam'),
-    path('team/delete/', views.delete_team, name='deleteTeam'),
-    path('team/invite-member/', views.invite_team_member, name='inviteTeamMember'),
-    path('team/delete-member/', views.delete_team_member, name='deleteTeamMember'),
+    path('team/delete', views.delete_team, name='deleteTeam'),
+    path('team/invite-member', views.invite_team_member, name='inviteTeamMember'),
+    path('team/delete-member', views.delete_team_member, name='deleteTeamMember'),
+    path('team/add-member', views.add_team_member, name='addTeamMember'),
 
     path('player/all', views.get_all_players, name='getAllUsers'),
     path('player/<int:id>', views.get_player_data, name="getPlayerData"),
