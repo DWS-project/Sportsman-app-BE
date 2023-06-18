@@ -5,7 +5,7 @@ from sqlite3 import IntegrityError
 
 import jwt
 from datetime import timedelta
-#import firebase_admin
+import firebase_admin
 from django.contrib.auth import authenticate
 from django.db.models import F
 from django.http import JsonResponse
@@ -20,7 +20,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-#from firebase_admin import storage
+from firebase_admin import storage
 from rest_framework.decorators import api_view
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.mail import EmailMessage
@@ -237,7 +237,7 @@ def login(request):
     },
 )
 @api_view(['POST'])
-@authenticate
+#@authenticate
 def logout(request):
     if request.user.is_authenticated:
         request.user.access_token = None
@@ -476,16 +476,14 @@ def get_all_sport_halls(request):
             queryset = queryset.order_by('-price')
 
     filtered_items = []
-    #for item in queryset:
-     #   sports_string = item.sports
-      #  sports_list = json.loads(sports_string)
-       # if any(sport in sports_list['sports'] for sport in sports):
-        #    filtered_items.append(model_to_dict(item))
     for item in queryset:
         if item.sports.filter(name__in=sports).exists():
-            filtered_items.append(model_to_dict(item))
+            item_dict = model_to_dict(item)
+            sports_list = [sport.name for sport in item.sports.all()]
+            item_dict['sports'] = sports_list
+            filtered_items.append(item_dict)
     if not any([price, city, sports, sport_halls_type, date, time, search_text, sort_type, sort_price]):
-        filtered_items = SportHall.objects.all()
+        filtered_items = [model_to_dict(item) for item in SportHall.objects.all()]
 
     return Response({'status': True, 'data': filtered_items}, status=status.HTTP_200_OK)
 
@@ -611,7 +609,7 @@ def update_player_photo(request, id):
     uploaded_file = request.FILES.get('photo')
     user = User.objects.get(id=id)
     if uploaded_file:
-        bucket = ''#storage.bucket()
+        bucket = storage.bucket()
         filename = uploaded_file.name
         blob = bucket.blob(filename)
         blob.content_type = 'image/jpeg'
@@ -812,6 +810,15 @@ def get_sport_hall_user(request):
     sporthall_id = request.GET.get('id')
     sporthall = SportHall.objects.get(id=sporthall_id)
     sporthall_data = model_to_dict(sporthall)
+    sports = sporthall_data['sports']
+    sports_data = []
+    for sport in sports:
+        sport_data = {
+            'id': sport.id,
+            'name': sport.name,
+        }
+        sports_data.append(sport_data)
+    sporthall_data['sports'] = sports_data
     if sporthall:
         return JsonResponse({'status': True, 'data': sporthall_data}, status=status.HTTP_200_OK)
     else:
@@ -1815,7 +1822,7 @@ def add_sport_hall(request):
     print(request.data)
     image_url = ''
     if uploaded_file:
-        bucket = ''#storage.bucket()
+        bucket = storage.bucket()
         filename = uploaded_file.name
         blob = bucket.blob(filename)
         blob.content_type = 'image/jpeg'
