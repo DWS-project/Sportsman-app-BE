@@ -5,7 +5,7 @@ from sqlite3 import IntegrityError
 
 import jwt
 from datetime import timedelta
-import firebase_admin
+#import firebase_admin
 from django.contrib.auth import authenticate
 from django.db.models import F
 from django.http import JsonResponse
@@ -20,7 +20,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from firebase_admin import storage
+#from firebase_admin import storage
 from rest_framework.decorators import api_view
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.mail import EmailMessage
@@ -624,7 +624,7 @@ def update_player_photo(request, id):
     uploaded_file = request.FILES.get('photo')
     user = User.objects.get(id=id)
     if uploaded_file:
-        bucket = storage.bucket()
+        bucket = ''#storage.bucket()
         filename = uploaded_file.name
         blob = bucket.blob(filename)
         blob.content_type = 'image/jpeg'
@@ -1660,7 +1660,7 @@ def get_users(request):
     search_text = request.GET.get('searchText')
     try:
         users = list(User.objects.filter(
-            username__icontains=search_text).values())
+            username__icontains=search_text, user_type_id=1).values())
         return JsonResponse({'status': True, 'data': users}, status=status.HTTP_200_OK)
     except PermanentTeams.DoesNotExist:
         return JsonResponse({'status': False, 'data': {}})
@@ -1707,7 +1707,7 @@ def invite_temporary_team(request):
     }
     details_json = json.dumps(details_data)
     invite = Invitations.objects.create(sender_id=sender_id, recipient_id=recipient_id, time_sent=formatted_time,
-                                        status=0, details=details_json, type='Temporary')
+                                        status=0, details=details_json, invitation_type_id=2)
     invite_data = {
         'model': 'sportsman.invitations',
         'fields': {
@@ -1716,7 +1716,7 @@ def invite_temporary_team(request):
             'recipient': invite.recipient_id,
             'status': invite.status,
             'details': invite.details,
-            'type': invite.type,
+            'type': invite.invitation_type_id,
             'time_sent': invite.time_sent,
         },
     }
@@ -1891,7 +1891,7 @@ def add_sport_hall(request):
     print(request.data)
     image_url = ''
     if uploaded_file:
-        bucket = storage.bucket()
+        bucket = ''#storage.bucket()
         filename = uploaded_file.name
         blob = bucket.blob(filename)
         blob.content_type = 'image/jpeg'
