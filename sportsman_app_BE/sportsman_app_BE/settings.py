@@ -11,15 +11,15 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 from datetime import timedelta
 from pathlib import Path
-import firebase_admin
-from firebase_admin import credentials
+#import firebase_admin
+#from firebase_admin import credentials
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-cred = credentials.Certificate("../cloud_key.json")
-app = firebase_admin.initialize_app(cred, {'storageBucket': 'sportsmanappcloud.appspot.com'})
+#cred = credentials.Certificate("../cloud_key.json")
+#app = firebase_admin.initialize_app(cred, {'storageBucket': 'sportsmanappcloud.appspot.com'})
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent

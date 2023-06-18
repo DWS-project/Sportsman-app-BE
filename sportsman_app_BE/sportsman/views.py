@@ -5,7 +5,7 @@ from sqlite3 import IntegrityError
 
 import jwt
 from datetime import timedelta
-import firebase_admin
+#import firebase_admin
 from django.contrib.auth import authenticate
 from django.db.models import F
 from django.http import JsonResponse
@@ -20,7 +20,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
-from firebase_admin import storage
+#from firebase_admin import storage
 from rest_framework.decorators import api_view
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.mail import EmailMessage
@@ -476,12 +476,14 @@ def get_all_sport_halls(request):
             queryset = queryset.order_by('-price')
 
     filtered_items = []
+    #for item in queryset:
+     #   sports_string = item.sports
+      #  sports_list = json.loads(sports_string)
+       # if any(sport in sports_list['sports'] for sport in sports):
+        #    filtered_items.append(model_to_dict(item))
     for item in queryset:
-        sports_string = item.sports
-        sports_list = json.loads(sports_string)
-        if any(sport in sports_list['sports'] for sport in sports):
+        if item.sports.filter(name__in=sports).exists():
             filtered_items.append(model_to_dict(item))
-
     if not any([price, city, sports, sport_halls_type, date, time, search_text, sort_type, sort_price]):
         filtered_items = SportHall.objects.all()
 
@@ -612,7 +614,7 @@ def update_player_photo(request, id):
     uploaded_file = request.FILES.get('photo')
     user = User.objects.get(id=id)
     if uploaded_file:
-        bucket = storage.bucket()
+        bucket = ''#storage.bucket()
         filename = uploaded_file.name
         blob = bucket.blob(filename)
         blob.content_type = 'image/jpeg'
@@ -1821,7 +1823,7 @@ def add_sport_hall(request):
     print(request.data)
     image_url = ''
     if uploaded_file:
-        bucket = storage.bucket()
+        bucket = ''#storage.bucket()
         filename = uploaded_file.name
         blob = bucket.blob(filename)
         blob.content_type = 'image/jpeg'
