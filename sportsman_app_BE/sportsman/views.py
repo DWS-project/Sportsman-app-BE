@@ -93,7 +93,7 @@ def registration_player(request):
             'name': name,
             'surname': surname, 'username': username,
             'email': email,
-            "tel_number": tel_number,
+            'tel_number': tel_number,
             'city': city,
             'age': age,
             'interests': interests,
@@ -527,7 +527,6 @@ def get_player_data(request, id):
         404: "User not found"
     }
 )
-@authenticate
 @api_view(['PUT'])
 def update_player_data(request, user_id):
     try:
@@ -566,7 +565,6 @@ def update_player_data(request, user_id):
         400: "Bad request",
     }
 )
-@authenticate
 @api_view(['PUT'])
 def update_user_password(request, user_id):
     try:
@@ -608,7 +606,6 @@ def update_user_password(request, user_id):
         404: "User not found",
     }
 )
-@authenticate
 @api_view(['PUT'])
 def update_player_photo(request, id):
     uploaded_file = request.FILES.get('photo')
@@ -950,7 +947,6 @@ def remove_sport_hall(request, user_id):
         404: "Not Found"
     }
 )
-@authenticate
 @api_view(['PATCH'])
 def change_sport_hall_status(request, user_id):
     data = request.data
@@ -997,11 +993,11 @@ def change_sport_hall_status(request, user_id):
         )),
     }
 )
-@authenticate
 @api_view(['POST'])
-def create_team(request, user_id):
-    name = request.data.get('name')
-
+def create_team(request):
+    data = request.data
+    name = data.get('name')
+    user_id = data.get('id')
     try:
         team_lead = Team.objects.create(team_lead_id_id=user_id)
         PermanentTeams.objects.create(team_name=name, team_id_id=team_lead.id)
@@ -1046,7 +1042,8 @@ def create_team(request, user_id):
 )
 @api_view(['GET'])
 def get_perm_teams(request):
-    lead_id = request.GET.get('id')
+    data = request.GET
+    lead_id = data.get('id')
     list_of_teams = PermanentTeams.objects.filter(team_id__team_lead_id_id=lead_id)
     res = serializers.serialize('json', list_of_teams)
     data = []
@@ -1114,10 +1111,10 @@ def get_perm_teams(request):
         )),
     }
 )
-@authenticate
 @api_view(['DELETE'])
 def delete_team(request):
-    team_id = request.GET.get('id')
+    data = request.GET
+    team_id = data.get('id')
 
     try:
         team = PermanentTeams.objects.get(id=team_id)
@@ -1151,12 +1148,12 @@ def delete_team(request):
         )),
     }
 )
-@authenticate
 @api_view(['POST'])
 def invite_team_member(request):
-    lead_id = request.data.get('id')
-    name = request.data.get('username')
-    team_id = request.data.get('team_id')
+    data = request.data
+    lead_id = data.get('id')
+    name = data.get('username')
+    team_id = data.get('team_id')
     user = User.objects.get(username=name)
     current_time = timezone.localtime(timezone.now())
     formatted_time = current_time.strftime('%Y-%m-%d %H:%M:%S')
@@ -1169,7 +1166,7 @@ def invite_team_member(request):
     details_json = json.dumps(details_data)
 
     Invitations.objects.create(recipient_id=user.id, sender_id=lead_id, time_sent=formatted_time,
-                               status=0, details=details_json)
+                               status=0, details=details_json, invitation_type_id=1)
     response_data = {
         'message': 'Invitation sent successfully',
         'memberName': name,
@@ -1202,16 +1199,15 @@ def invite_team_member(request):
         )),
     }
 )
-@authenticate
 @api_view(['DELETE'])
 def delete_team_member(request):
-    email = request.GET.get('email')
-    team_id = request.GET.get('teamId')
+    data = request.GET
+    email = data.get('email')
+    team_id = data.get('teamId')
 
     try:
         user = User.objects.get(email=email)
         user_id = user.id
-
         try:
             team_member = TeamMembers.objects.get(user_id_id=user_id, team_id_id=team_id)
             team_member.delete()
@@ -1388,7 +1384,6 @@ def contact_us(request):
         404: "User not found"
     }
 )
-@authenticate
 @api_view(['GET'])
 def get_player_invitations(request, id):
     data = request.GET
@@ -1428,7 +1423,7 @@ def get_player_invitations(request, id):
         404: "User not found"
     }
 )
-@authenticate
+
 @api_view(['GET'])
 def get_player_friends(request, id):
     data = request.GET
@@ -1719,7 +1714,6 @@ def get_invited_users(request):
     except User.DoesNotExist:
         return JsonResponse({'status': False, 'data': {}}, status=status.HTTP_404_NOT_FOUND)
 
-@authenticate
 @api_view(['DELETE'])
 def delete_player_friend(request, id):
     try:
@@ -1749,7 +1743,6 @@ def delete_player_friend(request, id):
         404: "Not found",  # Replace with your 404 response schema
     }
 )
-@authenticate
 @api_view(['PUT'])
 def update_invitation_status(request, invitation_id):
     try:
@@ -1770,7 +1763,6 @@ def update_invitation_status(request, invitation_id):
                           description='User id', type=openapi.TYPE_STRING),
     ]
 )
-@authenticate
 @api_view(['GET'])
 def get_player_games(request, user_id):
     data = request.GET
@@ -1887,5 +1879,42 @@ def update_my_sport_hall(request):
         sporthall.status = 'closed'
     sporthall.save()
     return JsonResponse({'message': "Uspješno ažuriran teren.", 'data': {}}, status=status.HTTP_200_OK)
+
+@swagger_auto_schema(
+    method='post',
+    tags=['TeamMembers'],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'team_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='Team id'),
+            'user_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='User id'),
+        },
+    ),
+    responses={
+        200: openapi.Response(
+            description='Success',
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING, description='A message indicating the result')
+                }
+            )
+        ),
+        400: 'Bad Request',
+        500: 'Internal Server Error'
+    }
+)
+@api_view(['POST'])
+def add_team_member(request):
+    data = request.data
+    team_id = data.get('team_id')
+    user_id = data.get('user_id')
+    TeamMembers.objects.create(**{
+        'team_id_id': team_id,
+        'user_id_id': user_id
+    })
+    return JsonResponse(
+        {'message': 'Clan tima uspjesno dodan!'},
+        status=status.HTTP_200_OK)
 
 
