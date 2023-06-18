@@ -14,7 +14,8 @@ def authenticate(func):
             return JsonResponse({'message': 'Pristup odbijen. Logirajte se da bi nastavili !'}, status=401)
 
         try:
-            decoded_token = jwt.decode(token, environ.get('SECRET_KEY'), algorithms=['HS256'])
+            decoded_token = jwt.decode(token, environ.get(
+                'SECRET_KEY'), algorithms=['HS256'])
             user_id = decoded_token.get('user_id')
 
             return func(request, user_id, *args, **kwargs)
