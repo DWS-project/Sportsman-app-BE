@@ -19,7 +19,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 cred = credentials.Certificate("../cloud_key.json")
-app = firebase_admin.initialize_app(cred, {'storageBucket': 'sportsmanappcloud.appspot.com'})
+app = firebase_admin.initialize_app(
+    cred, {'storageBucket': 'sportsmanappcloud.appspot.com'})
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -41,10 +42,13 @@ APPEND_SLASH = False
 
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_HOST_USER = 'sportsmandev520@gmail.com'
-EMAIL_HOST_PASSWORD = 'juqvxmyyllnjkazw'  #'sportsmandev!.'
+EMAIL_HOST_PASSWORD = 'juqvxmyyllnjkazw'  # 'sportsmandev!.'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
+
+SOCKETIO_HOST = 'localhost'
+SOCKETIO_PORT = 3000
 
 # Application definition
 
@@ -59,7 +63,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework_simplejwt',
     'drf_yasg',
-    'corsheaders'
+    'corsheaders',
+    'channels',
 ]
 
 REST_FRAMEWORK = {
