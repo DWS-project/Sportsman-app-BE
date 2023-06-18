@@ -34,8 +34,8 @@ from rest_framework.response import Response
 from django.core.mail import send_mail
 from django.core import serializers
 from dotenv import load_dotenv
-from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 
 load_dotenv()
 
