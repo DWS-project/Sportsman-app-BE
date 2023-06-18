@@ -40,8 +40,6 @@ from channels.layers import get_channel_layer
 load_dotenv()
 
 
-# Create your views here.
-
 @swagger_auto_schema(
     tags=['Authentication'],
     method='post',
@@ -105,8 +103,8 @@ def registration_player(request):
             'user_type': UserType.objects.get(pk=1)
         })
         channel_layer = get_channel_layer()
-        event = 'new_player_registered'
-        message = {'message': 'New player registered: {}'.format(username)}
+        event = 'NEW_PLAYER_REGISTERED'
+        message = {'message': 'Novi igrač je registrovan: {}'.format(username)}
 
         async_to_sync(channel_layer.group_send)('room', {
             'type': 'send_message',
@@ -171,7 +169,7 @@ def registration_owner(request):
             'name': name,
             'surname': surname, 'username': username,
             'email': email,
-            "tel_number": tel_number,
+            'tel_number': tel_number,
             'password': make_password(password),
             'confirmation_token': token,
             'email_confirmed': False,
@@ -229,7 +227,7 @@ def login(request):
                 return response
             else:
                 return JsonResponse({"message": "Pogrešan username ili password!!",
-                                     "data": {},
+                                    "data": {},
                                      }, status=status.HTTP_400_BAD_REQUEST)
         else:
             return JsonResponse({"message": "Email mora biti potvrđen",
@@ -468,7 +466,7 @@ def get_all_sport_halls(request):
         queryset = queryset.filter(city=city)
 
     if sport_halls_type:
-        queryset = queryset.filter(type__in=sport_halls_type)
+        queryset = queryset.filter(type__in=sport_halls_type) | queryset.filter(type="obaTipa")
 
     if price:
         queryset = queryset.filter(price__lte=price)
@@ -496,8 +494,11 @@ def get_all_sport_halls(request):
             item_dict['sports'] = sports_list
             filtered_items.append(item_dict)
     if not any([price, city, sports, sport_halls_type, date, time, search_text, sort_type, sort_price]):
-        filtered_items = [model_to_dict(item)
-                          for item in SportHall.objects.all()]
+        for item in queryset:
+            item_dict = model_to_dict(item)
+            sports_list = [sport.name for sport in item.sports.all()]
+            item_dict['sports'] = sports_list
+            filtered_items.append(item_dict)
 
     return Response({'status': True, 'data': filtered_items}, status=status.HTTP_200_OK)
 
@@ -748,6 +749,17 @@ def add_new_sport_hall(request, user_id):
 
         owner = User.objects.get(id=user_id)
         Owner_SportHall.objects.create(owner=owner, sport_hall=sport_hall)
+
+        channel_layer = get_channel_layer()
+        event = 'NEW_SPORT_HALL_REGISTERED'
+        message = {
+            'message': 'Novi teren je registrovan: {}'.format(title)}
+
+        async_to_sync(channel_layer.group_send)('room', {
+            'type': 'send_message',
+            'event': event,
+            'message': message
+        })
 
         return JsonResponse(
             {'data': {title, city, address, description, price},
@@ -1035,6 +1047,18 @@ def create_team(request):
     try:
         team_lead = Team.objects.create(team_lead_id_id=user_id)
         PermanentTeams.objects.create(team_name=name, team_id_id=team_lead.id)
+
+        channel_layer = get_channel_layer()
+        event = 'NEW_TEAM_REGISTERED'
+        message = {
+            'message': 'Novi tim je registrovan: {}'.format(name)}
+
+        async_to_sync(channel_layer.group_send)('room', {
+            'type': 'send_message',
+            'event': event,
+            'message': message
+        })
+
         return JsonResponse({'success': True, 'message': 'Uspješno kreiran tim'}, status=201)
     except IntegrityError as e:
         return JsonResponse({'error': 'Kreiranje tima nije uspjelo', 'details': str(e)}, status=400)
@@ -1852,6 +1876,7 @@ def get_player_games(request, user_id):
 @api_view(['GET'])
 def get_my_sport_halls(request):
     owner_id = request.GET.get('id')
+
     sport_halls = SportHall.objects.filter(owner_id=owner_id).values(
         'id','title', 'city', 'address', 'description', 'status', 'price', 'pictures', 'owner_id', 'capacity'
     )
