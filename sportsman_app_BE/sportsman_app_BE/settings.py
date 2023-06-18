@@ -46,6 +46,7 @@ EMAIL_HOST_PASSWORD = 'juqvxmyyllnjkazw'  # 'sportsmandev!.'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
+
 SOCKETIO_HOST = 'localhost'
 SOCKETIO_PORT = 3000
 
@@ -63,7 +64,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'drf_yasg',
     'corsheaders',
-    'socketio',
+    'channels',
 ]
 
 REST_FRAMEWORK = {

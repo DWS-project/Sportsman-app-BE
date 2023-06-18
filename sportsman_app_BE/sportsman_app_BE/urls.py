@@ -35,6 +35,4 @@ urlpatterns = [
          cache_timeout=0), name='schema-swagger-ui'),
     path('', include('sportsman.urls')),
     path('admin/', admin.site.urls),
-    path('socket.io/', socketio_views.socketio, name='socketio'),
-
 ]

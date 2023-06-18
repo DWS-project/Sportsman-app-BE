@@ -25,7 +25,6 @@ from rest_framework.decorators import api_view
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.mail import EmailMessage
 from .decorators import authenticate
-from .socket_utils import send_socket_message
 from .helpers import send_confirmation_email
 from .models import *
 from django.utils.crypto import get_random_string
@@ -35,6 +34,8 @@ from rest_framework.response import Response
 from django.core.mail import send_mail
 from django.core import serializers
 from dotenv import load_dotenv
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 load_dotenv()
 
@@ -90,7 +91,7 @@ def registration_player(request):
     else:
         token = send_confirmation_email(email)
 
-        new_user = User.objects.create(**{
+        User.objects.create(**{
             'name': name,
             'surname': surname, 'username': username,
             'email': email,
@@ -103,9 +104,16 @@ def registration_player(request):
             'email_confirmed': False,
             'user_type': UserType.objects.get(pk=1)
         })
+        channel_layer = get_channel_layer()
+        event = 'new_player_registered'
+        message = {'message': 'New player registered: {}'.format(username)}
 
-        send_socket_message('NEW_PLAYER_REGISTERED', {
-                            'user_id': new_user.id, 'username': new_user.username})
+        async_to_sync(channel_layer.group_send)('room', {
+            'type': 'send_message',
+            'event': event,
+            'message': message
+        })
+
     return JsonResponse({'status': True, 'message': "Uspješno ste se registrovali."},
                         status=status.HTTP_201_CREATED)
 
@@ -240,7 +248,7 @@ def login(request):
     },
 )
 @api_view(['POST'])
-#@authenticate
+# @authenticate
 def logout(request):
     if request.user.is_authenticated:
         request.user.access_token = None
@@ -487,7 +495,8 @@ def get_all_sport_halls(request):
             item_dict['sports'] = sports_list
             filtered_items.append(item_dict)
     if not any([price, city, sports, sport_halls_type, date, time, search_text, sort_type, sort_price]):
-        filtered_items = [model_to_dict(item) for item in SportHall.objects.all()]
+        filtered_items = [model_to_dict(item)
+                          for item in SportHall.objects.all()]
 
     return Response({'status': True, 'data': filtered_items}, status=status.HTTP_200_OK)
 
