@@ -1873,18 +1873,30 @@ def get_player_games(request, user_id):
         except Games.DoesNotExist:
             return JsonResponse({"message": "Igra nije pronađena"}, status=status.HTTP_404_NOT_FOUND)
 
-
 @api_view(['GET'])
 def get_my_sport_halls(request):
     owner_id = request.GET.get('id')
+
     sport_halls = SportHall.objects.filter(owner_id=owner_id).values(
-        'title', 'city', 'address', 'description', 'status', 'price', 'pictures', 'owner_id', 'id','sports','capacity'
+        'id','title', 'city', 'address', 'description', 'status', 'price', 'pictures', 'owner_id', 'capacity'
     )
+
+    queryset =  SportHall.objects.filter(owner_id=owner_id)
+
+    array = []
+    for item in queryset:
+        item_dict = model_to_dict(item)
+        sports_list = [sport.name for sport in item.sports.all()]
+        item_dict['sports'] = sports_list
+        array.append(item_dict)
+
     sport_halls_data = list(sport_halls)
+    print(array)
+    for sport_hall in sport_halls_data:
+        sport_hall_id = sport_hall['id']
+        print("Sport Hall ID:", sport_hall_id)
 
-    return JsonResponse(sport_halls_data, safe=False, status=status.HTTP_200_OK)
-
-
+    return JsonResponse(array, safe=False, status=status.HTTP_200_OK)
 @api_view(['POST'])
 def add_sport_hall(request):
     uploaded_file = request.data.get('slika')
@@ -1907,7 +1919,30 @@ def add_sport_hall(request):
     kapacitet = request.data.get('kapacitet')
     tip_terena = request.data.get('tipTerena')
     cijena = request.data.get('cijena')
+
     sportovi = request.data.get('sportovi')
+    string = str(sportovi)
+    clean_string = string.strip("[]'")
+
+    result_list = clean_string.split(',')
+
+
+    sportovi_id = []
+    for sport in result_list:
+        if sport == 'Fudbal':
+            sportovi_id.append(1)
+        elif sport == 'Kosarka':
+            sportovi_id.append(2)
+        elif sport == 'Rukomet':
+            sportovi_id.append(3)
+        elif sport == 'Odbojka':
+            sportovi_id.append(4)
+        elif sport == 'Paintball':
+            sportovi_id.append(5)
+        elif sport == 'Tenis':
+            sportovi_id.append(6)
+
+    sports_variable = Sport.objects.filter(id__in=sportovi_id)
     owner_id = int(request.data.get('id'))
     sport_hall = SportHall(
         title=ime_terena,
@@ -1917,14 +1952,14 @@ def add_sport_hall(request):
         price=cijena,
         capacity=kapacitet,
         type=tip_terena,
-        owner_id_id=owner_id,
+        owner_id=owner_id,
         status='open',
         pictures=image_url,
-        sports=sportovi
+
     )
 
     sport_hall.save()
-
+    sport_hall.sports.set(sports_variable)
     return Response({'message': 'Teren uspješno dodan'})
 
 
@@ -1947,14 +1982,37 @@ def update_my_sport_hall(request):
     sporthall.address = data.get('adresa')
     sporthall.price = data.get('cijena')
     sporthall.capacity = data.get('kapacitet')
-    sportovi = data.get('sportovi')
-    sportovi_str = ', '.join(sportovi)
-    sporthall.sports = sportovi_str
+    sportovi = request.data.get('sportovi')
+    string = str(sportovi)
+    clean_string = string.strip("[]'")
+
+    result_list = clean_string.split(',')
+
+    sportovi_id = []
+    for sport in sportovi:
+        if sport == 'Fudbal':
+            sportovi_id.append(1)
+        elif sport == 'Kosarka':
+            sportovi_id.append(2)
+        elif sport == 'Rukomet':
+            sportovi_id.append(3)
+        elif sport == 'Odbojka':
+            sportovi_id.append(4)
+        elif sport == 'Paintball':
+            sportovi_id.append(5)
+        elif sport == 'Tenis':
+            sportovi_id.append(6)
+    print(sportovi_id)
+    sports_variable = Sport.objects.filter(id__in=sportovi_id)
+
+
+
     if data.get('statusTerena') == '' or 'open':
         sporthall.status = 'open'
     else:
         sporthall.status = 'closed'
     sporthall.save()
+    sporthall.sports.set(sports_variable)
     return JsonResponse({'message': "Uspješno ažuriran teren.", 'data': {}}, status=status.HTTP_200_OK)
 
 
