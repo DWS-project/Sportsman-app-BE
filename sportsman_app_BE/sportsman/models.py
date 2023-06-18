@@ -24,7 +24,8 @@ class User(models.Model):
     confirmation_token = models.TextField(null=True)
     last_login = models.DateTimeField(null=True)
     email_confirmed = models.BooleanField(default=False)
-    user_type = models.ForeignKey(UserType, on_delete=models.CASCADE, null=True)
+    user_type = models.ForeignKey(
+        UserType, on_delete=models.CASCADE, null=True)
 
     def __str__(self):
         return self.email
@@ -55,11 +56,13 @@ class Invitations(models.Model):
         User, related_name='received_invitations', on_delete=models.CASCADE)
     status = models.IntegerField()
     details = models.TextField(null=True)
-    invitation_type = models.ForeignKey(InvitationType, on_delete=models.CASCADE, default=1)
+    invitation_type = models.ForeignKey(
+        InvitationType, on_delete=models.CASCADE, default=1)
 
     def __str__(self):
         return "sender: " + str(self.sender) + " recipient: " + str(self.recipient) + \
-            " status: " + str(self.status) + " time_sent: " + str(self.time_sent)
+            " status: " + str(self.status) + \
+            " time_sent: " + str(self.time_sent)
 
 
 class Team(models.Model):
@@ -133,7 +136,8 @@ class Games(models.Model):
     team_id = models.ForeignKey(Team, on_delete=models.CASCADE)
     status = models.ForeignKey(Status, on_delete=models.CASCADE)
     time_appointed = models.DateTimeField(null=True)
-    sport_hall = models.ForeignKey(SportHall, on_delete=models.CASCADE, null=True)
+    sport_hall = models.ForeignKey(
+        SportHall, on_delete=models.CASCADE, null=True)
 
     def __str__(self):
         return "hall: " + str(self.sport_hall) + " Team_id: " + str(self.team_id) + "status: " + str(self.status)
